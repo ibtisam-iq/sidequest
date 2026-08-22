@@ -1,0 +1,47 @@
+name: Validate data
+
+on:
+  pull_request:
+    paths:
+      - 'data/**'
+      - 'taxonomy/**'
+      - 'schema/**'
+      - 'scripts/**'
+      - '.github/workflows/validate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - 'taxonomy/**'
+      - 'schema/**'
+      - 'scripts/**'
+
+# A superseded run on the same branch is wasted work.
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate dataset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The exact command a contributor runs locally — CI and local cannot drift, because there
+      # is only one implementation of the rules.
+      - name: Validate all entries
+        run: npm run validate -- --report
+
+      - name: Unit tests
+        run: npm test

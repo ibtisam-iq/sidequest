@@ -1,0 +1,167 @@
+name: Issue form to PR
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+# Reruns for the same issue supersede each other rather than racing on the same branch.
+concurrency:
+  group: issue-to-pr-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  create-entry:
+    name: Turn the submission into a PR
+    runs-on: ubuntu-latest
+    # Only the two entry forms; every other issue is ignored.
+    if: >
+      contains(github.event.issue.labels.*.name, 'new-link') ||
+      contains(github.event.issue.labels.*.name, 'new-company')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Determine submission type
+        id: kind
+        run: |
+          if [ "${HAS_LINK}" = "true" ]; then
+            echo "kind=links" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=companies" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          HAS_LINK: ${{ contains(github.event.issue.labels.*.name, 'new-link') }}
+
+      # SECURITY: the issue body is untrusted input from anyone on the internet. It is passed
+      # through the environment and never interpolated into the shell — `${{ github.event.issue.body }}`
+      # inside a run: block would be a script-injection hole. The script derives filenames only
+      # from its own slugify() output, so a crafted title cannot traverse paths.
+      - name: Parse the submission
+        id: parse
+        continue-on-error: true
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        run: node scripts/parse-issue-form.mjs --kind "${{ steps.kind.outputs.kind }}"
+
+      - name: Comment and stop — submission is invalid
+        if: steps.parse.outputs.ok == 'false' && steps.parse.outputs.duplicate == ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const errors = ${{ toJSON(steps.parse.outputs.errors) }};
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Thanks for the submission — it can't be added as-is:",
+                '',
+                errors,
+                '',
+                'Edit the issue to fix those and this will run again automatically.',
+              ].join('\n'),
+            });
+
+      - name: Comment and stop — already in the directory
+        if: steps.parse.outputs.duplicate != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = ${{ toJSON(steps.parse.outputs.duplicate) }};
+            const url = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/${existing}`;
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `That URL is already in the directory as [\`${existing}\`](${url}) — closing as already covered.`,
+            });
+            await github.rest.issues.update({
+              ...context.repo,
+              issue_number: context.issue.number,
+              state: 'closed',
+              state_reason: 'not_planned',
+            });
+
+      - name: Stop here if the submission did not parse
+        if: steps.parse.outputs.ok != 'true'
+        run: exit 1
+
+      # The same script the PR gate and every contributor runs. Opening a PR that is already
+      # known to be broken helps nobody.
+      - name: Validate the new entry
+        id: validate
+        continue-on-error: true
+        run: npm run validate
+
+      - name: Comment and stop — validation failed
+        if: steps.validate.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: [
+                'The entry was generated but did not pass validation, so no PR was opened.',
+                '',
+                `[See the failing run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for the exact errors.`,
+              ].join('\n'),
+            });
+
+      - name: Fail if validation failed
+        if: steps.validate.outcome == 'failure'
+        run: exit 1
+
+      - name: Open the pull request
+        id: pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          # Reusing a deterministic branch per issue means editing the issue updates the existing
+          # PR instead of opening a second one.
+          branch: entry/issue-${{ github.event.issue.number }}
+          delete-branch: true
+          commit-message: |
+            feat(data): add ${{ steps.parse.outputs.slug }}
+
+            From issue #${{ github.event.issue.number }}.
+          title: 'Add ${{ steps.parse.outputs.title }}'
+          labels: |
+            automated-pr
+            ${{ steps.kind.outputs.kind == 'links' && 'new-link' || 'new-company' }}
+          body: |
+            Closes #${{ github.event.issue.number }}
+
+            Submitted via the issue form by @${{ github.event.issue.user.login }}.
+
+            | | |
+            |---|---|
+            | Entry | `${{ steps.parse.outputs.path }}` |
+            | Slug | `${{ steps.parse.outputs.slug }}` |
+            | ${{ steps.kind.outputs.kind == 'links' && 'Category' || 'Country' }} | `${{ steps.parse.outputs.group }}` |
+            | New to the taxonomy | ${{ steps.parse.outputs.new_category }} |
+
+            ${{ steps.parse.outputs.notes }}
+
+            Validation ran before this PR was opened, and the PR gate runs it again.
+
+      - name: Link the PR back to the issue
+        if: steps.pr.outputs.pull-request-number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `Opened ${{ steps.pr.outputs.pull-request-url }} with this entry. It will close this issue once merged.`,
+            });

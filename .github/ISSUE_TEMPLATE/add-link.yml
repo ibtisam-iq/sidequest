@@ -1,0 +1,95 @@
+name: Add a link
+description: Suggest a tool, repo, article, book, course, community, job board or anything else worth saving.
+title: 'Add link: '
+labels: ['new-link']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing. Submitting this form opens a pull request automatically —
+        you don't need to touch any YAML.
+
+        The URL is checked against the whole directory first, so duplicates are caught before
+        a PR is opened.
+
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: The link itself. Tracking parameters are stripped automatically.
+      placeholder: https://example.com
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: The name it should be listed under.
+      placeholder: Ghostty
+    validations:
+      required: true
+
+  - type: input
+    id: category
+    attributes:
+      label: Category
+      description: >
+        One category, e.g. `dev-tools`, `ai-tools`, `articles`, `courses`, `communities`,
+        `remote-job-boards`. See taxonomy/categories.yaml for the current list. A new category is
+        fine — it gets registered automatically, and the PR will flag it if it looks like a
+        near-duplicate of an existing one.
+      placeholder: dev-tools
+    validations:
+      required: true
+
+  - type: input
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated. Free-form — no fixed list.
+      placeholder: terminal, cli, open-source
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How strongly would you recommend it?
+      options:
+        - High
+        - Medium
+        - Low
+      default: 1
+    validations:
+      required: true
+
+  - type: input
+    id: description
+    attributes:
+      label: Description
+      description: One line on what it is.
+      placeholder: A fast, native, GPU-accelerated terminal emulator.
+
+  - type: textarea
+    id: note
+    attributes:
+      label: Note
+      description: Why it's worth saving, or where you found it.
+
+  - type: input
+    id: audience
+    attributes:
+      label: Audience
+      description: Comma-separated, e.g. developers, non-technical, job-seekers, everyone.
+      placeholder: developers
+
+  - type: input
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: >
+        Comma-separated slugs of similar entries already in the directory (the filename without
+        `.yaml`). The relationship is shown on both entries automatically.
+      placeholder: warp, cursor
