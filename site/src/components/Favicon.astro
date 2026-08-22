@@ -1,41 +1,56 @@
 ---
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 interface Props {
-  url: string;
-  /** Used for the initial shown when no icon is available. */
+  /** The entry's slug (filename without extension). */
+  slug: string;
+  /** 'links' | 'companies' - favicons are namespaced by collection, since slugs are only unique
+   * within one collection and a link and a company may share a slug. */
+  kind: 'links' | 'companies';
+  /** Used for the initial shown when no cached icon exists for this entry. */
   title: string;
   size?: number;
   eager?: boolean;
 }
 
-const { url, title, size = 28, eager = false } = Astro.props;
-
-const host = (() => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return '';
-  }
-})();
+const { slug, kind, title, size = 28, eager = false } = Astro.props;
 
 /**
- * Favicons come from a third-party service, so they fail routinely - the site has no icon, the
- * service is blocked, the visitor is offline. The initial is rendered underneath and the <img>
- * removes itself on error, so a failure degrades to the letter instead of an empty grey square.
+ * Favicons are fetched once at build/add-time by scripts/fetch-favicons.mjs (or the CLIs) and
+ * committed to site/public/favicons/<kind>/<slug>.<ext> - the page never calls out to a
+ * third-party favicon service at runtime. If nothing was cached for this slug (a brand-new
+ * entry the fetch step couldn't reach, or hasn't run for yet), it falls back to a letter initial
+ * rather than trying a live request.
+ *
+ * Duplicated here rather than imported from scripts/lib/favicon.mjs deliberately: this project
+ * keeps root scripts/ and site/ as independent packages with their own dependencies, and this
+ * check only needs node:fs, so it isn't worth coupling the two.
  */
+const KNOWN_EXTENSIONS = ['svg', 'png', 'ico', 'jpg', 'gif', 'webp'];
+
+// `astro dev`/`astro build` both run with the Astro project root (site/) as the working
+// directory, which is more reliable here than resolving off import.meta.url - Vite/Astro can
+// rewrite a component's import.meta.url to a virtual module id rather than its real file path.
+const FAVICONS_ROOT = path.join(process.cwd(), 'public', 'favicons');
+
+const cachedExt = KNOWN_EXTENSIONS.find((ext) =>
+  existsSync(path.join(FAVICONS_ROOT, kind, `${slug}.${ext}`)),
+);
+
 const initial = (title.trim()[0] ?? '?').toUpperCase();
 ---
 
 <span class="favicon" style={`--size:${size}px`} data-initial={initial} aria-hidden="true">
   {
-    host && (
+    cachedExt && (
       <img
-        src={`https://icons.duckduckgo.com/ip3/${host}.ico`}
+        src={`/favicons/${kind}/${slug}.${cachedExt}`}
         alt=""
         width={size}
         height={size}
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
-        onerror="this.remove()"
       />
     )
   }
@@ -54,7 +69,7 @@ const initial = (title.trim()[0] ?? '?').toUpperCase();
     overflow: hidden;
   }
 
-  /* The initial sits underneath; the image covers it when it loads. */
+  /* The initial sits underneath; the image covers it when a cached favicon exists. */
   .favicon::before {
     content: attr(data-initial);
     font-weight: 700;

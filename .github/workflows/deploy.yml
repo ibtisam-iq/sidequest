@@ -36,6 +36,13 @@ jobs:
       - name: Validate dataset
         run: npm run validate
 
+      # Caches any entry's favicon that arrived without one already committed - mainly
+      # issue-form PRs, since the local CLIs cache theirs immediately when the entry is added.
+      # Never fails the build: a dead site or missing icon just leaves that entry to fall back
+      # to a letter initial, handled by Favicon.astro.
+      - name: Fetch favicons
+        run: npm run fetch-favicons
+
       - name: Install site dependencies
         run: npm ci
         working-directory: site

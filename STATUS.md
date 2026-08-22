@@ -429,3 +429,79 @@ is a real problem worth a red run.
 
 Caught only because the duplicate path was tested against live GitHub rather than assumed from
 the local exit code.
+
+---
+
+## 2026-08-22 - Follow-up: build-time favicon caching
+
+**Removed the third-party favicon dependency.** Cards and entry pages used to fetch
+`https://icons.duckduckgo.com/ip3/<host>.ico` at runtime, falling back to a letter initial on
+failure. Pages must never call out to a third party at request time, so this is now a
+build-time fetch-and-cache step instead.
+
+**Built**
+
+- `scripts/lib/favicon.mjs` - fetches an entry's real favicon once: reads the page's `<head>`
+  (capped at 300KB, 8s timeout) for `<link rel="icon">` candidates, scores them (SVG and larger
+  PNGs beat a bare 16x16 `.ico`), tries the best few, and falls back to `<origin>/favicon.ico` if
+  none are found. Saves the raw bytes to `site/public/favicons/<kind>/<slug>.<ext>`, extension
+  decided from the response's content-type or sniffed magic bytes. Never throws - a dead site, a
+  missing icon, or a timeout just leaves no file for that slug.
+- `scripts/fetch-favicons.mjs` - bulk CLI over the whole dataset, concurrency-limited (6 at once),
+  skips any slug that already has a cached file so repeat runs only fetch what's new. `--force`
+  refetches everything.
+- `npm run fetch-favicons` at the root.
+
+**Namespaced by collection** (`favicons/links/<slug>` vs `favicons/companies/<slug>`), not flat -
+slugs are only unique **within** a collection by design, so a link and a company can legitimately
+share one, and they almost certainly have different icons.
+
+**Wired in exactly where asked:**
+
+- `deploy.yml` runs `npm run fetch-favicons` after validation, before the Astro build, so a
+  freshly-merged entry that arrived without a cached icon (mainly issue-form PRs) gets one before
+  the site is built.
+- `scripts/lib/cli-shared.mjs`'s `writeAndValidate` - shared by both `add-link.mjs` and
+  `add-company.mjs` - now fetches the new entry's favicon right after writing the YAML. Doing it
+  in the one shared function rather than duplicating the call in each CLI means both get it
+  automatically and can't drift.
+- `Favicon.astro` checks `site/public/favicons/<kind>/<slug>.<ext>` at build time across the known
+  extensions; if nothing is cached it renders the letter initial exactly as before. No runtime
+  fallback URL exists anywhere in the rendered page anymore.
+
+**A real bug caught only by checking rendered output, not just the build log.** The first version
+of `Favicon.astro` resolved the favicons directory via `import.meta.url`, which Astro/Vite
+rewrites to a virtual module id rather than the file's real path for `.astro` frontmatter - so
+`existsSync` silently found nothing, and every card fell back to its letter initial even though
+the files were sitting right there in `site/public/favicons/` and had been copied into `dist/`
+correctly. `npx astro check` reported 0/0/0 the whole time; only looking at the actual generated
+`<img>` tags (and then the rendered page) surfaced it. Fixed by resolving from `process.cwd()`
+instead, which is the Astro project root for both `astro dev` and `astro build`.
+
+**Verified in a real browser against the rebuilt site:**
+
+| Check | Result |
+|---|---|
+| `/links` - every card | real favicon renders (mix of `.png`, `.svg`, `.ico`, confirmed by `file`) |
+| Network requests, full session | zero requests to `duckduckgo.com` or any other third-party host - every request is to `localhost:4321` |
+| Uncached entry (dead domain, deliberately never fetched) | renders its letter initial; **no image request is even attempted** - not a failed request, no request at all |
+| `npm run add-link`, mocked end-to-end | entry written, favicon fetched and cached (`.png`), validated - all through the one shared code path |
+| Repeat `fetch-favicons` run | 0 fetched, 15 already cached - confirms the skip logic |
+| `--force` | refetches all 15 |
+| Failure paths (dead domain, malformed URL) | both report `failed` with a reason, leave no file, never throw |
+
+`npm test` - **55 tests passing** (5 new, covering the cache lookup, the no-network-call rejection
+for a malformed URL, the skip-on-cached path, and a real failed fetch against an unreachable host).
+`astro check` - 0 errors, 0 warnings, 0 hints. `npm run validate` - 15/15 entries still valid.
+
+**Known gap, noted rather than silently patched over:** `deploy.yml` does not commit newly-fetched
+favicon files back to the repository - they exist in that run's checkout, get built into `dist/`,
+and are deployed, but the next deploy run starts from a checkout without them and would refetch
+the same icon again for any entry that only ever arrived via the issue-form path (never through a
+local CLI, which caches immediately and commits its result). This is a repeat-network-call
+inefficiency, not a correctness problem - the letter-initial fallback never fires because of it,
+and every deploy still ends with the right icon on the right entry. Fixing it properly means
+either a bot commit-back step (the same shape of trade-off this project already declined for
+taxonomy entry counts, for the same reason: another moving part, another thing that can race) or
+teaching `issue-to-pr.yml` to fetch and commit the favicon as part of the PR diff. Neither was
+asked for here, so it's left as a follow-up rather than added unprompted.

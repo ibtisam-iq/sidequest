@@ -71,6 +71,7 @@ scripts/
     levenshtein.mjs    fuzzy-match distance, hand-rolled, zero deps
     taxonomy.mjs       registry read/write + fuzzy "did you mean" check
     yaml-io.mjs        read/write YAML data files
+    favicon.mjs        build-time favicon fetch-and-cache (no third-party call at runtime)
   normalize-url.mjs    thin CLI wrapper over lib/url.mjs
   normalize-slug.mjs   thin CLI wrapper over lib/slugify.mjs + lib/taxonomy.mjs
   validate.mjs         validates the whole dataset - used by CI *and* locally
@@ -78,10 +79,12 @@ scripts/
   add-company.mjs      interactive local CLI (npm run add-company)
   gen-zod-schemas.mjs  codegen: schema/*.json -> site/src/schemas/generated/*.ts
   parse-issue-form.mjs parses a GitHub Issue Form body (used by issue-to-pr.yml)
+  fetch-favicons.mjs   bulk favicon cache over the whole dataset (npm run fetch-favicons)
 
 site/                  the Astro project (its own package.json)
   astro.config.mjs     site: 'https://sidequest.ibtisam-iq.com'
   public/CNAME         sidequest.ibtisam-iq.com
+  public/favicons/<kind>/<slug>.<ext>   fetched by scripts/fetch-favicons.mjs, committed to git
   src/content.config.ts
   src/schemas/generated/   GENERATED - gitignored, never hand-edit
   src/lib/  src/components/  src/pages/
@@ -190,6 +193,13 @@ on the same line of one shared file, guaranteeing merge conflicts between concur
   which is what per-collection uniqueness buys us. The relationship is rendered **bidirectionally**:
   if A lists B, B's page also shows A. The reverse map is computed once per build from the full
   dataset.
+- **Favicons are fetched once and committed, never requested live.** `scripts/lib/favicon.mjs`
+  saves each entry's icon to `site/public/favicons/<kind>/<slug>.<ext>` (namespaced by collection,
+  for the same reason slugs are per-collection above). `Favicon.astro` checks that path at build
+  time and falls back to a letter initial if nothing is cached - there is no third-party favicon
+  URL anywhere in the rendered page. Resolve the favicons directory from `process.cwd()` in Astro
+  components, not `import.meta.url` - Astro/Vite rewrites a component's `import.meta.url` to a
+  virtual module id, which makes `existsSync` silently find nothing even when the file is real.
 - **JSON Schema is the single source of truth.** `schema/*.json` is authoritative and is what
   `validate.mjs` enforces via ajv. The Astro zod schemas in `site/src/schemas/generated/` are
   **generated** from it by `scripts/gen-zod-schemas.mjs` (wired as `predev`/`prebuild`), are
@@ -242,6 +252,7 @@ npm run preview          # serve the built site
 | `scripts/normalize-slug.mjs` | CLI wrapper over `lib/slugify.mjs` + `lib/taxonomy.mjs` - normalizes and fuzzy-checks a slug. |
 | `scripts/gen-zod-schemas.mjs` | Generates the Astro zod schemas from `schema/*.json`. Runs automatically via `predev`/`prebuild`. |
 | `scripts/parse-issue-form.mjs` | Parses a GitHub Issue Form markdown body into entry fields. Used only by `issue-to-pr.yml`. |
+| `scripts/fetch-favicons.mjs` | Fetches and caches a favicon for every entry that doesn't already have one in `site/public/favicons/<kind>/<slug>.<ext>`. Concurrency-limited, skips anything already cached, never fails the build over one dead site. `--force` refetches everything. Runs in `deploy.yml` before the Astro build, and per-entry inside `writeAndValidate` (shared by both add CLIs) right after writing. |
 
 ---
 

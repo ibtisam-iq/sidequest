@@ -21,7 +21,7 @@ const host = (() => {
 
 <article class="card" data-type={item.type}>
   <div class="card-top">
-    <Favicon url={item.url} title={item.title} size={28} />
+    <Favicon slug={item.slug} kind={item.type === 'link' ? 'links' : 'companies'} title={item.title} size={28} />
 
     <div class="head">
       <h3>

@@ -8,6 +8,7 @@ import { REPO_ROOT, writeYaml } from './yaml-io.mjs';
 import { categoriesFor, checkCategory, addCategory, displayNameFor } from './taxonomy.mjs';
 import { slugify, slugifyList } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
+import { fetchFaviconForEntry } from './favicon.mjs';
 
 /** Abort cleanly on Ctrl-C instead of writing a half-built entry. */
 export function bail(value) {
@@ -157,12 +158,34 @@ export function resolveEntryPath(type, category, title) {
   return { slug, filePath: path.join(dir, `${slug}.yaml`) };
 }
 
-/** Write the entry, then re-run the real validator over the whole dataset. */
+/**
+ * Write the entry, fetch its favicon, then re-run the real validator over the whole dataset.
+ *
+ * Fetching here (rather than duplicating the call in add-link.mjs and add-company.mjs
+ * separately) means both CLIs get it automatically, and a locally-added entry is committed with
+ * its favicon already cached rather than waiting for the next deploy to pick it up.
+ */
 export async function writeAndValidate(filePath, data) {
   await writeYaml(filePath, data);
 
   const rel = path.relative(REPO_ROOT, filePath);
   p.log.success(`Wrote ${rel}`);
+
+  // data/<kind>/<category>/<slug>.yaml - kind and slug are read back out of the path itself
+  // rather than threaded through as extra parameters everywhere writeAndValidate is called.
+  const parts = rel.split(path.sep);
+  const kind = parts[1];
+  const slug = path.basename(filePath, '.yaml');
+  const url = data.url ?? data.website;
+
+  if (url) {
+    const s1 = p.spinner();
+    s1.start('Fetching favicon');
+    const favicon = await fetchFaviconForEntry(kind, slug, url);
+    if (favicon.status === 'saved') s1.stop(`Cached favicon (.${favicon.ext})`);
+    else if (favicon.status === 'skipped') s1.stop('Favicon already cached');
+    else s1.stop(`No favicon found - will show a letter initial (${favicon.reason})`);
+  }
 
   const s = p.spinner();
   s.start('Validating dataset');

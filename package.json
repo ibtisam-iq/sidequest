@@ -16,6 +16,7 @@
   },
   "scripts": {
     "validate": "node scripts/validate.mjs",
+    "fetch-favicons": "node scripts/fetch-favicons.mjs",
     "add-link": "node scripts/add-link.mjs",
     "add-company": "node scripts/add-company.mjs",
     "test": "node --experimental-test-module-mocks --test \"scripts/lib/*.test.mjs\""
