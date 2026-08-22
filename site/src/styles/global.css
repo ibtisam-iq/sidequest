@@ -70,6 +70,11 @@
   --hiring: #17683a;
   --hiring-bg: #e6f5ec;
 
+  /* Semantic - legal risk disclosure (shadow libraries and similar) */
+  --warning: #8a5300;
+  --warning-bg: #fdf0d8;
+  --warning-border: #f0d199;
+
   /* Entity accent: companies get a distinct hue from links */
   --company: #0d6d8a;
   --company-bg: #e4f3f8;
@@ -114,6 +119,10 @@
     --hiring: #7ddba4;
     --hiring-bg: #122b1d;
 
+    --warning: #f0c069;
+    --warning-bg: #332608;
+    --warning-border: #5c481b;
+
     --company: #6dcbe8;
     --company-bg: #102a33;
     --company-border: #1e4756;
@@ -155,6 +164,10 @@
 
   --hiring: #7ddba4;
   --hiring-bg: #122b1d;
+
+  --warning: #f0c069;
+  --warning-bg: #332608;
+  --warning-border: #5c481b;
 
   --company: #6dcbe8;
   --company-bg: #102a33;

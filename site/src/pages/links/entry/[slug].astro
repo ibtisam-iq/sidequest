@@ -1,14 +1,15 @@
 ---
 import type { GetStaticPaths } from 'astro';
-import Layout from '../../../../layouts/Layout.astro';
-import Favicon from '../../../../components/Favicon.astro';
-import EntryCard from '../../../../components/EntryCard.astro';
-import { getData, getCardItems } from '../../../../lib/data';
+import Layout from '../../../layouts/Layout.astro';
+import Favicon from '../../../components/Favicon.astro';
+import EntryCard from '../../../components/EntryCard.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import { getData, getCardItems, describeCategoryPath } from '../../../lib/data';
 
 export const getStaticPaths = (async () => {
   const data = await getData();
   return data.links.map((entry) => ({
-    params: { category: entry.data.category, slug: entry.id },
+    params: { slug: entry.id },
     props: { slug: entry.id },
   }));
 }) satisfies GetStaticPaths;
@@ -19,11 +20,12 @@ const data = await getData();
 const cards = await getCardItems();
 
 const entry = data.linkBySlug.get(slug)!;
-const { title, url, description, note, tags, priority, audience, added_by, date_added } = entry.data;
+const { title, url, description, note, tags, priority, audience, added_by, date_added, legal_risk } =
+  entry.data;
 
-const categoryName =
-  data.linkCategories.find((c) => c.data.slug === entry.data.category)?.data.name ??
-  entry.data.category;
+const { parentSlug, parentName, subSlug, subName } = await describeCategoryPath(
+  entry.data.category,
+);
 
 /**
  * Forward and reverse references, already unioned at build time - so an entry that never
@@ -37,7 +39,15 @@ const alternatives = alternativeSlugs
 const declared = new Set(entry.data.alternatives ?? []);
 
 const host = new URL(url).hostname;
-const metaDescription = description ?? note ?? `${title} - a ${categoryName} entry in the sidequest directory.`;
+const metaDescription =
+  description ?? note ?? `${title} - a ${subName ?? parentName} entry in the sidequest directory.`;
+
+const breadcrumbItems = [
+  { label: 'Links', href: '/links' },
+  { label: parentName, href: `/links/${parentSlug}` },
+  ...(subSlug ? [{ label: subName!, href: `/links/${parentSlug}/${subSlug}` }] : []),
+  { label: title },
+];
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -48,16 +58,12 @@ const jsonLd = {
   mainEntity: { '@type': 'WebSite', name: title, url },
   breadcrumb: {
     '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Links', item: new URL('/links', Astro.site).href },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: categoryName,
-        item: new URL(`/links/${entry.data.category}`, Astro.site).href,
-      },
-      { '@type': 'ListItem', position: 3, name: title },
-    ],
+    itemListElement: breadcrumbItems.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.label,
+      ...(item.href && { item: new URL(item.href, Astro.site).href }),
+    })),
   },
 };
 ---
@@ -66,13 +72,7 @@ const jsonLd = {
   <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
 
   <div class="wrap page">
-    <nav class="crumbs" aria-label="Breadcrumb" data-pagefind-ignore>
-      <a href="/links">Links</a>
-      <span aria-hidden="true">/</span>
-      <a href={`/links/${entry.data.category}`}>{categoryName}</a>
-      <span aria-hidden="true">/</span>
-      <span aria-current="page">{title}</span>
-    </nav>
+    <Breadcrumbs items={breadcrumbItems} />
 
     <article data-pagefind-body>
       <header class="entry-head">
@@ -83,6 +83,15 @@ const jsonLd = {
           <a class="host" href={url} rel="noopener nofollow ugc">{host} ↗</a>
         </div>
       </header>
+
+      {
+        legal_risk && (
+          <p class="legal-risk-banner" role="note">
+            <span aria-hidden="true">⚠</span> May involve copyright infringement in your
+            jurisdiction - included for reference, not an endorsement.
+          </p>
+        )
+      }
 
       {description && <p class="lede">{description}</p>}
 
@@ -109,7 +118,15 @@ const jsonLd = {
       <dl class="facts" data-pagefind-ignore>
         <div>
           <dt>Category</dt>
-          <dd><a href={`/links/${entry.data.category}`}>{categoryName}</a></dd>
+          <dd>
+            <a href={`/links/${parentSlug}`}>{parentName}</a>
+            {subName && (
+              <>
+                {' '}
+                / <a href={`/links/${parentSlug}/${subSlug}`}>{subName}</a>
+              </>
+            )}
+          </dd>
         </div>
         <div>
           <dt>Priority</dt>
@@ -178,31 +195,9 @@ const jsonLd = {
 </Layout>
 
 <style>
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
   .page {
     padding-block: var(--sp-6) var(--sp-8);
     max-width: 860px;
-  }
-
-  .crumbs {
-    display: flex;
-    gap: var(--sp-2);
-    font-size: var(--text-sm);
-    color: var(--fg-subtle);
-    margin-bottom: var(--sp-5);
-    flex-wrap: wrap;
-  }
-
-  .crumbs a {
-    text-decoration: none;
   }
 
   .entry-head {
@@ -210,7 +205,6 @@ const jsonLd = {
     align-items: center;
     gap: var(--sp-4);
   }
-
 
   h1 {
     font-size: var(--text-3xl);
@@ -225,6 +219,20 @@ const jsonLd = {
 
   .host:hover {
     color: var(--accent);
+  }
+
+  .legal-risk-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid var(--warning-border);
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
+    font-weight: 600;
   }
 
   .lede {

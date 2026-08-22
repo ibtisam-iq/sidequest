@@ -1,0 +1,135 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Layout from '../../../../layouts/Layout.astro';
+import EntryCard from '../../../../components/EntryCard.astro';
+import MegaMenu from '../../../../components/MegaMenu.astro';
+import Breadcrumbs from '../../../../components/Breadcrumbs.astro';
+import Pagination from '../../../../components/Pagination.astro';
+import { getData, getCardItems, getLinkCategoryTree } from '../../../../lib/data';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const [data, items] = await Promise.all([getData(), getCardItems()]);
+
+  // Group once by the exact "parent/sub" path, then iterate registered subcategories - O(n)
+  // overall rather than O(n x subcategories).
+  const byPath = new Map<string, typeof items>();
+  for (const item of items) {
+    if (item.type !== 'link' || !item.subSlug) continue;
+    const bucket = byPath.get(item.group);
+    if (bucket) bucket.push(item);
+    else byPath.set(item.group, [item]);
+  }
+
+  const subcategories = data.linkCategories.filter((c) => c.data.parent);
+
+  return subcategories.flatMap((sub) => {
+    // The filter above (`c.data.parent`) guarantees this is set - the schema types it as
+    // optional because it also describes top-level categories, which have none.
+    const parentSlug = sub.data.parent!;
+    const path = `${parentSlug}/${sub.data.slug}`;
+    const entries = byPath.get(path) ?? [];
+    if (!entries.length) return [];
+
+    const parent = data.linkCategories.find((c) => c.data.slug === parentSlug && !c.data.parent);
+
+    return paginate(entries, {
+      params: { parent: parentSlug, sub: sub.data.slug },
+      props: { parentName: parent?.data.name ?? parentSlug, subName: sub.data.name },
+      pageSize: 24,
+    });
+  });
+}) satisfies GetStaticPaths;
+
+const { page, parentName, subName } = Astro.props;
+const { parent, sub } = Astro.params;
+
+const tree = await getLinkCategoryTree();
+
+const pageLabel = page.currentPage > 1 ? ` - page ${page.currentPage}` : '';
+const description = `${subName} (${parentName}) in the sidequest directory - ${page.total} curated ${
+  page.total === 1 ? 'entry' : 'entries'
+}${pageLabel}.`;
+
+const canonical = new URL(`/links/${parent}/${sub}`, Astro.site).href;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${subName} · sidequest`,
+  description,
+  url: new URL(Astro.url.pathname, Astro.site).href,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: page.total,
+    itemListElement: page.data.map((item, i) => ({
+      '@type': 'ListItem',
+      position: page.start + i + 1,
+      name: item.title,
+      url: new URL(item.href, Astro.site).href,
+    })),
+  },
+};
+---
+
+<Layout
+  title={`${subName}${pageLabel}`}
+  description={description}
+  canonical={page.currentPage > 1 ? canonical : undefined}
+>
+  <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <MegaMenu tree={tree} currentParent={parent!} currentSub={sub!} />
+
+  <div class="wrap page">
+    <Breadcrumbs
+      items={[
+        { label: 'Links', href: '/links' },
+        { label: parentName, href: `/links/${parent}` },
+        { label: subName },
+      ]}
+    />
+
+    <header class="page-head" data-pagefind-ignore>
+      <h1>{subName}</h1>
+      <p class="muted">
+        {page.total} {page.total === 1 ? 'entry' : 'entries'}
+        {page.lastPage > 1 && ` · page ${page.currentPage} of ${page.lastPage}`}
+      </p>
+    </header>
+
+    <div class="grid">
+      {page.data.map((item) => <EntryCard item={item} hideGroup />)}
+    </div>
+    <Pagination page={page} />
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding-block: var(--sp-6) var(--sp-8);
+  }
+
+  .page-head {
+    margin-bottom: var(--sp-6);
+  }
+
+  .page-head h1 {
+    font-size: var(--text-3xl);
+  }
+
+  .page-head p {
+    margin-top: var(--sp-1);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: var(--sp-4);
+  }
+
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

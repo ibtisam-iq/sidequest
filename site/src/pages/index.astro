@@ -1,29 +1,29 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import EntryCard from '../components/EntryCard.astro';
-import { getData, getCardItems, getCategoriesWithCounts } from '../lib/data';
+import { getData, getCardItems, getCategoriesWithCounts, getLinkCategoryTree } from '../lib/data';
 
 const data = await getData();
 const items = await getCardItems();
-const [linkCategories, countries] = await Promise.all([
-  getCategoriesWithCounts('links'),
-  getCategoriesWithCounts('companies'),
+const [linkTree, countries] = await Promise.all([
+  getLinkCategoryTree(),
+  getCategoriesWithCounts(),
 ]);
 
 const recent = items.slice(0, 6);
 const featured = items.filter((i) => i.priority === 'high').slice(0, 6);
 
+const populatedTree = linkTree.filter((c) => c.count > 0);
+
 const stats = [
   { value: items.length, label: 'entries' },
-  { value: linkCategories.filter((c) => c.count > 0).length, label: 'categories' },
+  { value: populatedTree.length, label: 'categories' },
   { value: data.companies.length, label: 'companies' },
   { value: data.tagCounts.size, label: 'tags' },
 ];
 
 const description =
   'An open, curated directory of tools, GitHub repos, articles, books, courses, communities, remote job boards and notable tech companies - everything worth remembering, in one searchable place.';
-
-const populated = linkCategories.filter((c) => c.count > 0);
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -88,14 +88,14 @@ const jsonLd = {
     <div class="section-head">
       <div>
         <h2>Browse by category</h2>
-        <p class="muted">{populated.length} categories with entries.</p>
+        <p class="muted">{populatedTree.length} categories with entries.</p>
       </div>
       <a class="more" href="/links">All links →</a>
     </div>
 
     <div class="cat-grid">
       {
-        populated.map((category) => (
+        populatedTree.map((category) => (
           <a class="cat" href={`/links/${category.slug}`}>
             <span class="cat-name">{category.name}</span>
             <span class="cat-count">{category.count}</span>

@@ -36,6 +36,14 @@ const host = (() => {
     </div>
   </div>
 
+  {
+    item.legalRisk && (
+      <p class="legal-risk" title="May involve copyright infringement in your jurisdiction - included for reference, not an endorsement.">
+        <span aria-hidden="true">⚠</span> Legal risk - not an endorsement
+      </p>
+    )
+  }
+
   {item.description && <p class="desc">{item.description}</p>}
 
   <div class="meta">
@@ -165,6 +173,21 @@ const host = (() => {
     background: var(--company-bg);
     color: var(--company);
     border: 1px solid var(--company-border);
+  }
+
+  .legal-risk {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--text-xs);
+    font-weight: 650;
+    color: var(--warning);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-1) var(--sp-2);
   }
 
   .pill {

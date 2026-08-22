@@ -58,6 +58,10 @@ const categories = defineCollection({
     slug: z.string(),
     name: z.string(),
     type: z.enum(['links', 'companies']),
+    // Omitted for a top-level category; set to a top-level slug of the same type for a
+    // subcategory. Only two levels are supported - a subcategory never has its own parent field
+    // pointing at another subcategory. Companies stay flat and never set this.
+    parent: z.string().optional(),
   }),
 });
 

@@ -2,52 +2,57 @@
 import type { GetStaticPaths } from 'astro';
 import Layout from '../../../layouts/Layout.astro';
 import EntryCard from '../../../components/EntryCard.astro';
-import CategoryNav from '../../../components/CategoryNav.astro';
+import MegaMenu from '../../../components/MegaMenu.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import Pagination from '../../../components/Pagination.astro';
-import { getData, getCardItems, getCategoriesWithCounts } from '../../../lib/data';
+import { getData, getCardItems, getLinkCategoryTree } from '../../../lib/data';
 
 export const getStaticPaths = (async ({ paginate }) => {
   const [data, items] = await Promise.all([getData(), getCardItems()]);
 
-  // Group once, then iterate categories - O(n) overall. Filtering the full list per category
-  // would be O(n x categories) and is what makes builds crawl at scale.
-  const byCategory = new Map<string, typeof items>();
+  // Group once, then iterate parents - O(n) overall. Filtering the full list per parent would
+  // be O(n x parents) and is what makes builds crawl at scale.
+  const byParent = new Map<string, typeof items>();
   for (const item of items) {
     if (item.type !== 'link') continue;
-    const bucket = byCategory.get(item.group);
+    const bucket = byParent.get(item.parentSlug);
     if (bucket) bucket.push(item);
-    else byCategory.set(item.group, [item]);
+    else byParent.set(item.parentSlug, [item]);
   }
 
-  return data.linkCategories.flatMap((category) => {
-    const entries = byCategory.get(category.data.slug) ?? [];
+  const topLevel = data.linkCategories.filter((c) => !c.data.parent);
+
+  return topLevel.flatMap((parent) => {
+    // A parent page shows everything filed under it, including its subcategories - only a
+    // parent with genuinely zero entries anywhere under it is skipped.
+    const entries = byParent.get(parent.data.slug) ?? [];
     if (!entries.length) return [];
 
     return paginate(entries, {
-      params: { category: category.data.slug },
-      props: { categoryName: category.data.name },
+      params: { parent: parent.data.slug },
+      props: { parentName: parent.data.name },
       pageSize: 24,
     });
   });
 }) satisfies GetStaticPaths;
 
-const { page, categoryName } = Astro.props;
-const { category } = Astro.params;
+const { page, parentName } = Astro.props;
+const { parent } = Astro.params;
 
-const categories = await getCategoriesWithCounts('links');
+const tree = await getLinkCategoryTree();
 
 const pageLabel = page.currentPage > 1 ? ` - page ${page.currentPage}` : '';
-const description = `${categoryName} in the sidequest directory - ${page.total} curated ${
+const description = `${parentName} in the sidequest directory - ${page.total} curated ${
   page.total === 1 ? 'entry' : 'entries'
 }${pageLabel}.`;
 
 // Later pages point their canonical at page 1 so pagination doesn't fragment ranking signals.
-const canonical = new URL(`/links/${category}`, Astro.site).href;
+const canonical = new URL(`/links/${parent}`, Astro.site).href;
 
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: `${categoryName} · sidequest`,
+  name: `${parentName} · sidequest`,
   description,
   url: new URL(Astro.url.pathname, Astro.site).href,
   mainEntity: {
@@ -64,55 +69,35 @@ const jsonLd = {
 ---
 
 <Layout
-  title={`${categoryName}${pageLabel}`}
+  title={`${parentName}${pageLabel}`}
   description={description}
   canonical={page.currentPage > 1 ? canonical : undefined}
 >
   <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
 
+  <MegaMenu tree={tree} currentParent={parent!} currentSub={null} />
+
   <div class="wrap page">
-    <nav class="crumbs" aria-label="Breadcrumb" data-pagefind-ignore>
-      <a href="/links">Links</a>
-      <span aria-hidden="true">/</span>
-      <span aria-current="page">{categoryName}</span>
-    </nav>
+    <Breadcrumbs items={[{ label: 'Links', href: '/links' }, { label: parentName }]} />
 
     <header class="page-head" data-pagefind-ignore>
-      <h1>{categoryName}</h1>
+      <h1>{parentName}</h1>
       <p class="muted">
         {page.total} {page.total === 1 ? 'entry' : 'entries'}
         {page.lastPage > 1 && ` · page ${page.currentPage} of ${page.lastPage}`}
       </p>
     </header>
 
-    <div class="layout">
-      <CategoryNav categories={categories} base="/links" current={category!} />
-
-      <div>
-        <div class="grid">
-          {page.data.map((item) => <EntryCard item={item} hideGroup />)}
-        </div>
-        <Pagination page={page} />
-      </div>
+    <div class="grid">
+      {page.data.map((item) => <EntryCard item={item} />)}
     </div>
+    <Pagination page={page} />
   </div>
 </Layout>
 
 <style>
   .page {
     padding-block: var(--sp-6) var(--sp-8);
-  }
-
-  .crumbs {
-    display: flex;
-    gap: var(--sp-2);
-    font-size: var(--text-sm);
-    color: var(--fg-subtle);
-    margin-bottom: var(--sp-4);
-  }
-
-  .crumbs a {
-    text-decoration: none;
   }
 
   .page-head {
@@ -127,23 +112,10 @@ const jsonLd = {
     margin-top: var(--sp-1);
   }
 
-  .layout {
-    display: grid;
-    grid-template-columns: 230px 1fr;
-    gap: var(--sp-6);
-    align-items: start;
-  }
-
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: var(--sp-4);
-  }
-
-  @media (max-width: 900px) {
-    .layout {
-      grid-template-columns: 1fr;
-    }
   }
 
   @media (max-width: 640px) {

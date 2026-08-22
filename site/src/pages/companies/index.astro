@@ -5,7 +5,7 @@ import CategoryNav from '../../components/CategoryNav.astro';
 import { getCardItems, getCategoriesWithCounts } from '../../lib/data';
 
 const items = (await getCardItems()).filter((i) => i.type === 'company');
-const countries = await getCategoriesWithCounts('companies');
+const countries = await getCategoriesWithCounts();
 
 const facetFrom = (key: keyof (typeof items)[number], label: string, format = (v: string) => v) => {
   const counts = new Map<string, number>();

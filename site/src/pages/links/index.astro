@@ -1,11 +1,12 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Browse from '../../components/Browse.astro';
-import CategoryNav from '../../components/CategoryNav.astro';
-import { getCardItems, getCategoriesWithCounts } from '../../lib/data';
+import MegaMenu from '../../components/MegaMenu.astro';
+import { getCardItems, getLinkCategoryTree } from '../../lib/data';
 
 const items = (await getCardItems()).filter((i) => i.type === 'link');
-const categories = await getCategoriesWithCounts('links');
+const tree = await getLinkCategoryTree();
+const populatedCount = tree.filter((c) => c.count > 0).length;
 
 const countOf = <T,>(list: T[], get: (item: T) => string[] | string) => {
   const counts = new Map<string, number>();
@@ -21,14 +22,10 @@ const countOf = <T,>(list: T[], get: (item: T) => string[] | string) => {
 const tagCounts = countOf(items, (i) => i.tags);
 const audienceCounts = countOf(items, (i) => i.audience ?? []);
 
+// No "Category" facet here - the mega-menu above is the category navigation now, at both
+// levels. Repeating it as a flat filter chip list would either flatten the hierarchy back down
+// (defeating the point of the tree) or duplicate the same ~40 categories twice on one page.
 const facets = [
-  {
-    key: 'group',
-    label: 'Category',
-    options: categories
-      .filter((c) => c.count > 0)
-      .map((c) => ({ value: c.slug, label: c.name, count: c.count })),
-  },
   {
     key: 'priority',
     label: 'Priority',
@@ -82,29 +79,25 @@ const jsonLd = {
 <Layout title="All links" description={description}>
   <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
 
+  <MegaMenu tree={tree} currentParent={null} currentSub={null} />
+
   <div class="wrap page">
     <header class="page-head" data-pagefind-ignore>
       <p class="eyebrow">Directory</p>
       <h1>Links</h1>
       <p class="muted lede">
         Tools, repos, articles, books, courses, communities and job boards - {items.length} entries
-        across {categories.filter((c) => c.count > 0).length} categories.
+        across {populatedCount} categories.
       </p>
     </header>
 
-    <div class="layout">
-      <CategoryNav categories={categories} base="/links" current={null} />
-
-      <div class="content">
-        {
-          items.length ? (
-            <Browse items={items} facets={facets} />
-          ) : (
-            <p class="empty">No links yet.</p>
-          )
-        }
-      </div>
-    </div>
+    {
+      items.length ? (
+        <Browse items={items} facets={facets} />
+      ) : (
+        <p class="empty">No links yet.</p>
+      )
+    }
   </div>
 </Layout>
 
@@ -125,18 +118,5 @@ const jsonLd = {
   .lede {
     margin-top: var(--sp-2);
     max-width: 62ch;
-  }
-
-  .layout {
-    display: grid;
-    grid-template-columns: 230px 1fr;
-    gap: var(--sp-6);
-    align-items: start;
-  }
-
-  @media (max-width: 900px) {
-    .layout {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

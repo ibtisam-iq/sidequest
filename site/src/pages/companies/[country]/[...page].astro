@@ -32,7 +32,7 @@ export const getStaticPaths = (async ({ paginate }) => {
 const { page, countryName } = Astro.props;
 const { country } = Astro.params;
 
-const countries = await getCategoriesWithCounts('companies');
+const countries = await getCategoriesWithCounts();
 
 const hiring = page.data.filter((c) => c.hiring_status === 'actively-hiring').length;
 const pageLabel = page.currentPage > 1 ? ` - page ${page.currentPage}` : '';
