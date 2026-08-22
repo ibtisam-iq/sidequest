@@ -1,0 +1,74 @@
+---
+interface Props {
+  url: string;
+  /** Used for the initial shown when no icon is available. */
+  title: string;
+  size?: number;
+  eager?: boolean;
+}
+
+const { url, title, size = 28, eager = false } = Astro.props;
+
+const host = (() => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+})();
+
+/**
+ * Favicons come from a third-party service, so they fail routinely — the site has no icon, the
+ * service is blocked, the visitor is offline. The initial is rendered underneath and the <img>
+ * removes itself on error, so a failure degrades to the letter instead of an empty grey square.
+ */
+const initial = (title.trim()[0] ?? '?').toUpperCase();
+---
+
+<span class="favicon" style={`--size:${size}px`} data-initial={initial} aria-hidden="true">
+  {
+    host && (
+      <img
+        src={`https://icons.duckduckgo.com/ip3/${host}.ico`}
+        alt=""
+        width={size}
+        height={size}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        onerror="this.remove()"
+      />
+    )
+  }
+</span>
+
+<style>
+  .favicon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--size);
+    height: var(--size);
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+    overflow: hidden;
+  }
+
+  /* The initial sits underneath; the image covers it when it loads. */
+  .favicon::before {
+    content: attr(data-initial);
+    font-weight: 700;
+    font-size: calc(var(--size) * 0.44);
+    color: var(--fg-subtle);
+    line-height: 1;
+  }
+
+  .favicon img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--bg-subtle);
+  }
+</style>

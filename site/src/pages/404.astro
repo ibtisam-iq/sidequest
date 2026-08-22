@@ -1,0 +1,143 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCategoriesWithCounts } from '../lib/data';
+
+// A real page with its own metadata and noindex — deliberately not a copy of the homepage.
+// Astro does genuine per-page static generation, so this needs no special machinery.
+const categories = (await getCategoriesWithCounts('links')).filter((c) => c.count > 0).slice(0, 8);
+---
+
+<Layout
+  title="Page not found"
+  description="That page doesn't exist in the sidequest directory. Browse links and companies instead."
+  noindex
+>
+  <div class="wrap page">
+    <p class="code">404</p>
+    <h1>That page took a different sidequest.</h1>
+    <p class="muted lede">
+      The URL doesn't match anything in the directory. It may have been renamed, or the entry may
+      never have existed.
+    </p>
+
+    <div class="actions">
+      <a class="btn primary" href="/">Back home</a>
+      <a class="btn" href="/links">Browse links</a>
+      <a class="btn" href="/companies">Browse companies</a>
+      <a class="btn" href="/search">Search</a>
+    </div>
+
+    {
+      categories.length > 0 && (
+        <section class="suggest">
+          <p class="eyebrow">Popular categories</p>
+          <div class="chips">
+            {categories.map((category) => (
+              <a class="chip" href={`/links/${category.slug}`}>
+                {category.name}
+                <span class="n">{category.count}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )
+    }
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding-block: var(--sp-9);
+    max-width: 640px;
+    text-align: center;
+  }
+
+  .code {
+    font-family: var(--font-mono);
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    background: linear-gradient(100deg, var(--accent), var(--company));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    margin-top: var(--sp-3);
+  }
+
+  .lede {
+    margin-top: var(--sp-3);
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--sp-2);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--sp-6);
+  }
+
+  .btn {
+    padding: var(--sp-2) var(--sp-5);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    color: var(--fg);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .suggest {
+    margin-top: var(--sp-8);
+    padding-top: var(--sp-6);
+    border-top: 1px solid var(--border);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    justify-content: center;
+    margin-top: var(--sp-3);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-3);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+    text-decoration: none;
+  }
+
+  .chip:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  .n {
+    font-size: var(--text-xs);
+    color: var(--fg-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

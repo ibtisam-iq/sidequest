@@ -1,0 +1,15 @@
+name: GitLab
+website: https://about.gitlab.com
+country: united-states
+industry: devops
+size: enterprise
+remote_policy: remote
+hiring_status: actively-hiring
+careers_url: https://about.gitlab.com/jobs/
+tags:
+  - devops
+  - all-remote
+  - open-core
+rating: One of the largest all-remote companies in tech; their public handbook is a genuinely useful reference on how remote organisations actually operate.
+date_added: "2026-08-21"
+source: local

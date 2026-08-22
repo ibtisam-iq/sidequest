@@ -1,0 +1,269 @@
+---
+interface Props {
+  categories: { slug: string; name: string; count: number }[];
+  base: string;
+  current: string | null;
+  label?: string;
+}
+
+const { categories, base, current, label = 'Categories' } = Astro.props;
+
+const populated = categories.filter((c) => c.count > 0);
+
+/**
+ * The category list is designed for a registry that grows to hundreds of entries, so it is
+ * grouped alphabetically into collapsible sections rather than rendered as one flat list.
+ * Below the threshold that grouping is pure noise, so a short list stays flat.
+ */
+const GROUPING_THRESHOLD = 12;
+const shouldGroup = populated.length > GROUPING_THRESHOLD;
+
+const groups = shouldGroup
+  ? [
+      ...populated.reduce((map, category) => {
+        const initial = category.name[0].toUpperCase();
+        const key = /[A-Z]/.test(initial) ? initial : '#';
+        (map.get(key) ?? map.set(key, []).get(key)!).push(category);
+        return map;
+      }, new Map<string, typeof populated>()),
+    ].sort(([a], [b]) => a.localeCompare(b))
+  : [];
+
+const total = populated.reduce((sum, c) => sum + c.count, 0);
+---
+
+<nav class="cat-nav" aria-label={label} data-pagefind-ignore>
+  <div class="nav-head">
+    <span class="eyebrow">{label}</span>
+    <span class="count">{populated.length}</span>
+  </div>
+
+  {
+    populated.length > GROUPING_THRESHOLD && (
+      <input
+        type="search"
+        class="filter"
+        placeholder="Filter categories…"
+        aria-label={`Filter ${label.toLowerCase()}`}
+        data-nav-filter
+      />
+    )
+  }
+
+  <ul class="flat">
+    <li>
+      <a href={base} class:list={['item', { active: current === null }]}>
+        <span>All</span>
+        <span class="n">{total}</span>
+      </a>
+    </li>
+  </ul>
+
+  {
+    shouldGroup ? (
+      <div class="groups">
+        {groups.map(([letter, items]) => (
+          <details open={items.some((c) => c.slug === current)} data-nav-group>
+            <summary>
+              <span class="letter">{letter}</span>
+              <span class="n">{items.length}</span>
+            </summary>
+            <ul>
+              {items.map((category) => (
+                <li data-nav-item data-name={category.name.toLowerCase()}>
+                  <a
+                    href={`${base}/${category.slug}`}
+                    class:list={['item', { active: category.slug === current }]}
+                  >
+                    <span>{category.name}</span>
+                    <span class="n">{category.count}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
+      </div>
+    ) : (
+      <ul>
+        {populated.map((category) => (
+          <li data-nav-item data-name={category.name.toLowerCase()}>
+            <a
+              href={`${base}/${category.slug}`}
+              class:list={['item', { active: category.slug === current }]}
+            >
+              <span>{category.name}</span>
+              <span class="n">{category.count}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <p class="no-match" data-nav-empty hidden>No matching categories.</p>
+</nav>
+
+<style>
+  .cat-nav {
+    position: sticky;
+    top: 76px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    max-height: calc(100dvh - 100px);
+    overflow-y: auto;
+  }
+
+  .nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-3);
+  }
+
+  .filter {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    margin-bottom: var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+    font-size: var(--text-sm);
+    outline: none;
+  }
+
+  .filter:focus {
+    border-color: var(--accent);
+    box-shadow: var(--ring);
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .flat {
+    padding-bottom: var(--sp-2);
+    margin-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--fg-muted);
+    font-size: var(--text-sm);
+    transition: background 0.13s, color 0.13s;
+  }
+
+  .item:hover {
+    background: var(--bg-subtle);
+    color: var(--fg);
+  }
+
+  .item.active {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .n {
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-subtle);
+  }
+
+  details {
+    border-top: 1px solid var(--border);
+  }
+
+  details:first-child {
+    border-top: none;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) var(--sp-3);
+    cursor: pointer;
+    list-style: none;
+    border-radius: var(--radius-sm);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary:hover {
+    background: var(--bg-subtle);
+  }
+
+  .letter {
+    font-weight: 650;
+    font-size: var(--text-sm);
+  }
+
+  details[open] .letter {
+    color: var(--accent);
+  }
+
+  .no-match {
+    font-size: var(--text-sm);
+    color: var(--fg-subtle);
+    padding: var(--sp-3);
+    text-align: center;
+  }
+
+  @media (max-width: 900px) {
+    .cat-nav {
+      position: static;
+      max-height: none;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.cat-nav').forEach((nav) => {
+    const input = nav.querySelector<HTMLInputElement>('[data-nav-filter]');
+    if (!input) return;
+
+    const items = [...nav.querySelectorAll<HTMLElement>('[data-nav-item]')];
+    const groups = [...nav.querySelectorAll<HTMLDetailsElement>('[data-nav-group]')];
+    const empty = nav.querySelector<HTMLElement>('[data-nav-empty]')!;
+
+    input.addEventListener('input', () => {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+
+      for (const item of items) {
+        const show = !query || (item.dataset.name ?? '').includes(query);
+        item.hidden = !show;
+        if (show) visible++;
+      }
+
+      // Hide a letter group entirely when nothing under it matches, and open the rest so
+      // results aren't buried behind a collapsed section.
+      for (const group of groups) {
+        const hasMatch = [...group.querySelectorAll<HTMLElement>('[data-nav-item]')].some(
+          (i) => !i.hidden,
+        );
+        group.hidden = !hasMatch;
+        if (query && hasMatch) group.open = true;
+      }
+
+      empty.hidden = visible > 0;
+    });
+  });
+</script>

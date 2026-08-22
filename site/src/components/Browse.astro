@@ -1,0 +1,386 @@
+---
+import EntryCard from './EntryCard.astro';
+import type { CardItem } from '../lib/data';
+
+interface FacetGroup {
+  key: string;
+  label: string;
+  options: { value: string; label: string; count: number }[];
+  /**
+   * A facet with a single option is normally noise — a chip that every entry matches filters
+   * nothing. The exception is a toggle-shaped facet like "actively hiring", where the one chip
+   * is the whole point, so those opt in explicitly.
+   */
+  alwaysShow?: boolean;
+}
+
+interface Props {
+  items: CardItem[];
+  facets: FacetGroup[];
+  /** Label for the curation-ordered sort. */
+  topLabel?: string;
+}
+
+const { items, facets, topLabel = 'Top picks' } = Astro.props;
+
+const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+/**
+ * Every card is rendered server-side and filtering toggles visibility on the existing nodes,
+ * rather than re-rendering from JSON on the client.
+ *
+ * The tradeoff is deliberate: it means the card markup exists in exactly one place
+ * (EntryCard.astro), so a filtered view can never drift from the server-rendered one, and every
+ * entry stays in the HTML for crawlers with JS off. The cost is page weight that grows with the
+ * dataset — fine into the low thousands (it gzips well), but if this collection ever passes
+ * roughly 5k entries, switch to rendering cards on the client from /api/entries.json and keep
+ * only the first batch server-rendered.
+ *
+ * Per-category pages stay paginated regardless, so the crawlable path never depends on this page.
+ */
+const sortKey = (item: CardItem) =>
+  `${PRIORITY_RANK[item.priority ?? ''] ?? (item.hiring_status === 'actively-hiring' ? 0 : 1)}`;
+---
+
+<div class="browse" data-browse>
+  <div class="toolbar" data-pagefind-ignore>
+    <div class="filter-status">
+      <span data-result-count>{items.length}</span>
+      <span class="muted">{items.length === 1 ? 'entry' : 'entries'}</span>
+      <button type="button" class="clear" data-clear hidden>Clear filters</button>
+    </div>
+
+    <div class="sort" role="group" aria-label="Sort order">
+      <button type="button" class="sort-btn is-active" data-sort="recent" aria-pressed="true">
+        Recent
+      </button>
+      <button type="button" class="sort-btn" data-sort="top" aria-pressed="false">{topLabel}</button>
+    </div>
+  </div>
+
+  <div class="facets" data-pagefind-ignore>
+    {
+      facets
+        .filter((group) => group.options.length > (group.alwaysShow ? 0 : 1))
+        .map((group) => (
+          <div class="facet">
+            <span class="eyebrow facet-label">{group.label}</span>
+            <div class="chips" role="group" aria-label={group.label}>
+              {group.options.map((option) => (
+                <button
+                  type="button"
+                  class="chip"
+                  data-facet={group.key}
+                  data-value={option.value}
+                  aria-pressed="false"
+                >
+                  {option.label}
+                  <span class="chip-count">{option.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))
+    }
+  </div>
+
+  <div class="grid" data-grid>
+    {
+      items.map((item) => (
+        <div
+          class="cell"
+          data-item
+          data-group={item.group}
+          data-type={item.type}
+          data-priority={item.priority ?? ''}
+          data-tags={item.tags.join(' ')}
+          data-audience={(item.audience ?? []).join(' ')}
+          data-industry={item.industry ?? ''}
+          data-hiring={item.hiring_status ?? ''}
+          data-remote={item.remote_policy ?? ''}
+          data-size={item.size ?? ''}
+          data-date={item.date_added}
+          data-rank={sortKey(item)}
+        >
+          <EntryCard item={item} />
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="no-results" data-no-results hidden>
+    Nothing matches those filters. <button type="button" class="linkish" data-clear-inline>Clear them</button>.
+  </p>
+</div>
+
+<style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--sp-4);
+  }
+
+  .filter-status {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-sm);
+  }
+
+  .filter-status [data-result-count] {
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .clear {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .sort {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+  }
+
+  .sort-btn {
+    border: none;
+    background: none;
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 550;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .sort-btn:hover {
+    color: var(--fg);
+  }
+
+  .sort-btn.is-active {
+    background: var(--bg-elevated);
+    color: var(--fg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .facets {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--sp-5);
+  }
+
+  .facet {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: var(--sp-3);
+    align-items: start;
+  }
+
+  .facet-label {
+    padding-top: 6px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--text-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: all 0.14s;
+    text-transform: capitalize;
+  }
+
+  .chip:hover {
+    border-color: var(--border-strong);
+    color: var(--fg);
+  }
+
+  .chip[aria-pressed='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .chip-count {
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    opacity: 0.65;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: var(--sp-4);
+  }
+
+  .cell[hidden] {
+    display: none;
+  }
+
+  .no-results {
+    text-align: center;
+    color: var(--fg-muted);
+    padding: var(--sp-8) var(--sp-4);
+  }
+
+  .linkish {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 640px) {
+    .facet {
+      grid-template-columns: 1fr;
+      gap: var(--sp-2);
+    }
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .toolbar {
+      justify-content: space-between;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-browse]').forEach((root) => {
+    const grid = root.querySelector<HTMLElement>('[data-grid]')!;
+    const cells = [...root.querySelectorAll<HTMLElement>('[data-item]')];
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('[data-facet]')];
+    const countEl = root.querySelector<HTMLElement>('[data-result-count]')!;
+    const clearBtn = root.querySelector<HTMLButtonElement>('[data-clear]')!;
+    const noResults = root.querySelector<HTMLElement>('[data-no-results]')!;
+
+    /** facet key -> selected values. Within a facet: OR. Across facets: AND. */
+    const selected = new Map<string, Set<string>>();
+
+    const valuesOf = (cell: HTMLElement, key: string): string[] => {
+      const raw = cell.dataset[key] ?? '';
+      return key === 'tags' || key === 'audience' ? raw.split(' ').filter(Boolean) : [raw];
+    };
+
+    const matches = (cell: HTMLElement) =>
+      [...selected].every(
+        ([key, values]) => values.size === 0 || valuesOf(cell, key).some((v) => values.has(v)),
+      );
+
+    function apply() {
+      let visible = 0;
+      for (const cell of cells) {
+        const show = matches(cell);
+        cell.hidden = !show;
+        if (show) visible++;
+      }
+
+      countEl.textContent = String(visible);
+      const active = [...selected.values()].some((s) => s.size > 0);
+      clearBtn.hidden = !active;
+      noResults.hidden = visible > 0;
+      grid.hidden = visible === 0;
+
+      // Reflect state in the URL so a filtered view can be linked and survives reload.
+      const params = new URLSearchParams();
+      for (const [key, values] of selected) {
+        if (values.size) params.set(key, [...values].join(','));
+      }
+      const qs = params.toString();
+      history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const key = chip.dataset.facet!;
+        const value = chip.dataset.value!;
+        const set = selected.get(key) ?? new Set<string>();
+
+        if (set.has(value)) set.delete(value);
+        else set.add(value);
+
+        selected.set(key, set);
+        chip.setAttribute('aria-pressed', String(set.has(value)));
+        apply();
+      });
+    });
+
+    const clearAll = () => {
+      selected.clear();
+      chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      apply();
+    };
+
+    clearBtn.addEventListener('click', clearAll);
+    root.querySelector('[data-clear-inline]')?.addEventListener('click', clearAll);
+
+    // Sorting reorders the existing nodes, so it composes with filtering for free.
+    const sortButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-sort]')];
+    sortButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.dataset.sort;
+
+        sortButtons.forEach((b) => {
+          const on = b === button;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+
+        const sorted = [...cells].sort((a, b) => {
+          const dateDesc = (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '');
+          if (mode === 'recent') return dateDesc;
+          const rank = (a.dataset.rank ?? '9').localeCompare(b.dataset.rank ?? '9');
+          return rank || dateDesc;
+        });
+
+        grid.append(...sorted);
+      });
+    });
+
+    // Restore any filters encoded in the URL.
+    const params = new URLSearchParams(location.search);
+    let restored = false;
+    for (const [key, raw] of params) {
+      const values = new Set(raw.split(',').filter(Boolean));
+      if (!values.size) continue;
+      selected.set(key, values);
+      restored = true;
+      chips
+        .filter((c) => c.dataset.facet === key && values.has(c.dataset.value!))
+        .forEach((c) => c.setAttribute('aria-pressed', 'true'));
+    }
+    if (restored) apply();
+  });
+</script>

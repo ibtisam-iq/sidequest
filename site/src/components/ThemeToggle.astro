@@ -1,0 +1,103 @@
+---
+// Three-state theme control: system -> light -> dark -> system.
+// Zero dependencies; the no-flash bootstrap lives in Layout.astro's <head>.
+---
+
+<button id="theme-toggle" type="button" aria-label="Change colour theme" title="Change colour theme">
+  <svg class="i i-system" viewBox="0 0 24 24" aria-hidden="true"
+    ><rect x="2" y="4" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg
+  >
+  <svg class="i i-light" viewBox="0 0 24 24" aria-hidden="true"
+    ><circle cx="12" cy="12" r="4"></circle><path
+      d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+    ></path></svg
+  >
+  <svg class="i i-dark" viewBox="0 0 24 24" aria-hidden="true"
+    ><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg
+  >
+  <span class="sr-only" id="theme-state">System theme</span>
+</button>
+
+<style>
+  button {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  button:hover {
+    background: var(--bg-subtle);
+    color: var(--fg);
+  }
+
+  .i {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    grid-area: 1 / 1;
+    display: none;
+  }
+
+  /* Which icon shows is driven purely by the root attribute the script sets. */
+  :global(html:not([data-theme])) .i-system,
+  :global(html[data-theme='light']) .i-light,
+  :global(html[data-theme='dark']) .i-dark {
+    display: block;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const button = document.getElementById('theme-toggle');
+    if (!button) return;
+
+    const label = document.getElementById('theme-state');
+    const root = document.documentElement;
+    const ORDER = ['system', 'light', 'dark'];
+
+    const current = () => root.dataset.theme ?? 'system';
+
+    const apply = (next) => {
+      if (next === 'system') {
+        delete root.dataset.theme;
+        try {
+          localStorage.removeItem('sq-theme');
+        } catch {}
+      } else {
+        root.dataset.theme = next;
+        try {
+          localStorage.setItem('sq-theme', next);
+        } catch {}
+      }
+      if (label) label.textContent = `${next[0].toUpperCase()}${next.slice(1)} theme`;
+      button.setAttribute('title', `Theme: ${next} (click to change)`);
+    };
+
+    apply(current());
+
+    button.addEventListener('click', () => {
+      apply(ORDER[(ORDER.indexOf(current()) + 1) % ORDER.length]);
+    });
+  })();
+</script>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sidequest.ibtisam-iq.com/sitemap-index.xml

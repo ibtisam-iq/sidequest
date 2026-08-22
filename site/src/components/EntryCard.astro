@@ -1,0 +1,237 @@
+---
+import type { CardItem } from '../lib/data';
+import Favicon from './Favicon.astro';
+
+interface Props {
+  item: CardItem;
+  /** Suppresses the category pill on pages that are already scoped to one category. */
+  hideGroup?: boolean;
+}
+
+const { item, hideGroup = false } = Astro.props;
+
+const host = (() => {
+  try {
+    return new URL(item.url).hostname;
+  } catch {
+    return '';
+  }
+})();
+---
+
+<article class="card" data-type={item.type}>
+  <div class="card-top">
+    <Favicon url={item.url} title={item.title} size={28} />
+
+    <div class="head">
+      <h3>
+        <a href={item.href}>{item.title}</a>
+      </h3>
+      <p class="host">{host}</p>
+    </div>
+
+    <div class="flags">
+      {item.isNew && <span class="badge badge-new">New</span>}
+      {item.type === 'company' && <span class="badge badge-company">Company</span>}
+    </div>
+  </div>
+
+  {item.description && <p class="desc">{item.description}</p>}
+
+  <div class="meta">
+    {!hideGroup && <a class="pill pill-group" href={`/${item.type === 'link' ? 'links' : 'companies'}/${item.group}`}>{item.groupName}</a>}
+    {item.priority && <span class={`pill pill-priority p-${item.priority}`}>{item.priority}</span>}
+    {item.industry && <span class="pill">{item.industry.replace(/-/g, ' ')}</span>}
+    {
+      item.hiring_status === 'actively-hiring' && (
+        <span class="pill pill-hiring">
+          <span class="dot" aria-hidden="true" />
+          hiring
+        </span>
+      )
+    }
+    {item.remote_policy && item.remote_policy !== 'unknown' && <span class="pill">{item.remote_policy}</span>}
+    {item.tags.slice(0, 3).map((tag) => <span class="pill pill-tag">#{tag}</span>)}
+  </div>
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+    height: 100%;
+  }
+
+  .card:hover {
+    border-color: var(--accent-border);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+
+  .card[data-type='company']:hover {
+    border-color: var(--company-border);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .head {
+    min-width: 0;
+    flex: 1;
+  }
+
+  h3 {
+    font-size: var(--text-base);
+    font-weight: 620;
+    letter-spacing: -0.01em;
+  }
+
+  /* Stretched link: the whole card is the hit target, but only the title is in the a11y tree. */
+  h3 a {
+    color: var(--fg);
+    text-decoration: none;
+  }
+
+  h3 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+  }
+
+  .card:hover h3 a {
+    color: var(--accent);
+  }
+
+  .host {
+    font-size: var(--text-xs);
+    color: var(--fg-subtle);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .flags {
+    display: flex;
+    gap: var(--sp-1);
+    flex-shrink: 0;
+  }
+
+  .desc {
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    margin-top: auto;
+    padding-top: var(--sp-1);
+  }
+
+  .badge {
+    font-size: 0.6875rem;
+    font-weight: 650;
+    padding: 2px var(--sp-2);
+    border-radius: var(--radius-full);
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+
+  .badge-new {
+    background: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .badge-company {
+    background: var(--company-bg);
+    color: var(--company);
+    border: 1px solid var(--company-border);
+  }
+
+  .pill {
+    font-size: var(--text-xs);
+    padding: 2px var(--sp-2);
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    color: var(--fg-muted);
+    border: 1px solid transparent;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  /* Above the stretched-link overlay so it stays independently clickable. */
+  .pill-group {
+    position: relative;
+    z-index: 1;
+    text-decoration: none;
+    background: var(--bg-inset);
+    color: var(--fg-muted);
+    font-weight: 550;
+  }
+
+  .pill-group:hover {
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+
+  .pill-tag {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-subtle);
+  }
+
+  .pill-priority {
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .p-high {
+    background: var(--priority-high-bg);
+    color: var(--priority-high);
+  }
+
+  .p-medium {
+    background: var(--priority-medium-bg);
+    color: var(--priority-medium);
+  }
+
+  .p-low {
+    background: var(--priority-low-bg);
+    color: var(--priority-low);
+  }
+
+  .pill-hiring {
+    background: var(--hiring-bg);
+    color: var(--hiring);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+</style>

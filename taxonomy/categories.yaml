@@ -61,3 +61,7 @@
 - slug: pakistan
   name: Pakistan
   type: companies
+
+- slug: united-states
+  name: United States
+  type: companies

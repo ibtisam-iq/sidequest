@@ -1,0 +1,44 @@
+# sidequest
+
+> An open, curated directory of things worth remembering: developer and AI tools, GitHub repos,
+> articles, books, courses, communities, remote job boards, referral links, and a directory of
+> notable tech companies organised by country.
+
+sidequest is a static site generated from flat YAML files in a public git repository. There is no
+database and no user accounts. Every entry is a single YAML file, so the underlying data is easy
+to read, fork, and reuse.
+
+## Data model
+
+Two entity types, with separate schemas:
+
+- **Links** (`data/links/<category>/<slug>.yaml`) — any saved resource. Required fields: url,
+  title, category, tags, priority (high|medium|low), date_added, source. Optional: note,
+  description, added_by, alternatives, audience.
+- **Companies** (`data/companies/<country>/<slug>.yaml`) — tech companies worth knowing about.
+  Required: name, website, country, industry, date_added, source. Optional: careers_url,
+  hiring_status, size, rating, tags, remote_policy.
+
+Categories live in an open registry (`taxonomy/categories.yaml`) rather than a fixed enum, so the
+taxonomy grows with the directory. Tags are free-form. Entry counts are computed, never stored.
+
+The `alternatives` field is declared one-way but presented both ways: if entry A lists B as an
+alternative, B's page also shows A.
+
+## Machine-readable access
+
+- Full dataset as JSON: https://sidequest.ibtisam-iq.com/api/entries.json
+- Sitemap: https://sidequest.ibtisam-iq.com/sitemap-index.xml
+- Source of truth (YAML + JSON Schema): https://github.com/ibtisam-iq/sidequest
+
+## Key pages
+
+- https://sidequest.ibtisam-iq.com/ — overview, categories, recent and top entries
+- https://sidequest.ibtisam-iq.com/links — all links, filterable by category, priority, audience, tag
+- https://sidequest.ibtisam-iq.com/companies — company directory, filterable by country, industry,
+  hiring status, remote policy and size
+- https://sidequest.ibtisam-iq.com/search — full-text search
+
+## License
+
+MIT. Attribution to https://github.com/ibtisam-iq/sidequest is appreciated.
