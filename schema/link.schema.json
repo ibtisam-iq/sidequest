@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sidequest.ibtisam-iq.com/schema/link.schema.json",
+  "title": "Link",
+  "description": "A generic sidequest entry: a tool, repo, article, book, course, community, job board, referral link, or anything else worth saving.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["url", "title", "category", "tags", "priority", "date_added", "source"],
+  "properties": {
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://",
+      "description": "Canonical URL of the thing being saved."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Display name."
+    },
+    "category": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Category slug. Must exist in taxonomy/categories.yaml with type: links, and must match the containing folder name."
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "description": "Free-form tags, normalized to lowercase-kebab. No registry."
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "date_added": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date. Must be quoted in YAML so it parses as a string, not a timestamp."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["local", "issue-form", "pr"],
+      "description": "How this entry entered the repo."
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Why you saved it, or the context you found it in."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "One-line description shown on the card."
+    },
+    "added_by": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$",
+      "description": "GitHub username."
+    },
+    "alternatives": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "description": "Slugs of similar/alternative link entries. Rendered bidirectionally: if A lists B, B's page also shows A."
+    },
+    "audience": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "description": "Free-form audience labels, e.g. developers, non-technical, job-seekers, everyone."
+    }
+  }
+}

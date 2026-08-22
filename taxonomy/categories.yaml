@@ -1,0 +1,63 @@
+# sidequest taxonomy registry
+#
+# An OPEN registry — categories grow with the directory. Nothing here is a fixed enum.
+#
+#   slug  kebab-case identifier; must match the folder name under data/
+#   name  human-readable display name
+#   type  links | companies
+#
+# For `links`, the registry key is the category.
+# For `companies`, the registry key is the COUNTRY (mirroring data/companies/<country>/).
+# Industry is deliberately free-form and NOT registered here.
+#
+# Entry counts are NOT stored. They are computed at build time by the site and by
+# `npm run validate -- --report`. Storing them would put every single-entry PR on the
+# same line of this file and guarantee merge conflicts between concurrent contributions.
+#
+# Adding a category: use `npm run add-link` / `npm run add-company`, which normalizes the
+# slug and fuzzy-matches it against this list to stop near-duplicates ("ai-tool" vs "ai-tools")
+# from fragmenting the taxonomy. Adding by hand is fine too — just run `npm run validate`.
+
+- slug: dev-tools
+  name: Dev Tools
+  type: links
+
+- slug: ai-tools
+  name: AI Tools
+  type: links
+
+- slug: github-repos
+  name: GitHub Repos
+  type: links
+
+- slug: articles
+  name: Articles
+  type: links
+
+- slug: books
+  name: Books
+  type: links
+
+- slug: courses
+  name: Courses
+  type: links
+
+- slug: communities
+  name: Communities
+  type: links
+
+- slug: remote-job-boards
+  name: Remote Job Boards
+  type: links
+
+- slug: referral-links
+  name: Referral Links
+  type: links
+
+- slug: newsletters
+  name: Newsletters
+  type: links
+
+- slug: pakistan
+  name: Pakistan
+  type: companies

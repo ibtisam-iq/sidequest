@@ -1,0 +1,15 @@
+url: https://remoteok.com
+title: RemoteOK
+category: remote-job-boards
+description: A long-running remote job board with salary ranges shown on most listings.
+tags:
+  - remote-work
+  - jobs
+  - hiring
+priority: high
+audience:
+  - job-seekers
+  - developers
+date_added: "2026-08-15"
+source: local
+note: Salary transparency on the listing itself saves a lot of wasted applications.
