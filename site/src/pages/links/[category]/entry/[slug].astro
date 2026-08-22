@@ -1,0 +1,391 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Layout from '../../../../layouts/Layout.astro';
+import Favicon from '../../../../components/Favicon.astro';
+import EntryCard from '../../../../components/EntryCard.astro';
+import { getData, getCardItems } from '../../../../lib/data';
+
+export const getStaticPaths = (async () => {
+  const data = await getData();
+  return data.links.map((entry) => ({
+    params: { category: entry.data.category, slug: entry.id },
+    props: { slug: entry.id },
+  }));
+}) satisfies GetStaticPaths;
+
+const { slug } = Astro.props;
+
+const data = await getData();
+const cards = await getCardItems();
+
+const entry = data.linkBySlug.get(slug)!;
+const { title, url, description, note, tags, priority, audience, added_by, date_added } = entry.data;
+
+const categoryName =
+  data.linkCategories.find((c) => c.data.slug === entry.data.category)?.data.name ??
+  entry.data.category;
+
+/**
+ * Forward and reverse references, already unioned at build time — so an entry that never
+ * declared `alternatives` itself still shows the entries that pointed at it.
+ */
+const alternativeSlugs = data.alternatives.get(slug) ?? [];
+const alternatives = alternativeSlugs
+  .map((s) => cards.find((c) => c.slug === s))
+  .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+const declared = new Set(entry.data.alternatives ?? []);
+
+const host = new URL(url).hostname;
+const metaDescription = description ?? note ?? `${title} — a ${categoryName} entry in the sidequest directory.`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: title,
+  description: metaDescription,
+  url: new URL(Astro.url.pathname, Astro.site).href,
+  mainEntity: { '@type': 'WebSite', name: title, url },
+  breadcrumb: {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Links', item: new URL('/links', Astro.site).href },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: categoryName,
+        item: new URL(`/links/${entry.data.category}`, Astro.site).href,
+      },
+      { '@type': 'ListItem', position: 3, name: title },
+    ],
+  },
+};
+---
+
+<Layout title={title} description={metaDescription}>
+  <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <div class="wrap page">
+    <nav class="crumbs" aria-label="Breadcrumb" data-pagefind-ignore>
+      <a href="/links">Links</a>
+      <span aria-hidden="true">/</span>
+      <a href={`/links/${entry.data.category}`}>{categoryName}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{title}</span>
+    </nav>
+
+    <article data-pagefind-body>
+      <header class="entry-head">
+        <Favicon url={url} title={title} size={52} eager />
+
+        <div>
+          <h1>{title}</h1>
+          <a class="host" href={url} rel="noopener nofollow ugc">{host} ↗</a>
+        </div>
+      </header>
+
+      {description && <p class="lede">{description}</p>}
+
+      <div class="actions" data-pagefind-ignore>
+        <a class="btn primary" href={url} rel="noopener nofollow ugc">Visit {title}</a>
+        <a
+          class="btn"
+          href={`https://github.com/ibtisam-iq/sidequest/blob/main/data/links/${entry.data.category}/${slug}.yaml`}
+          rel="noopener"
+        >
+          View YAML
+        </a>
+      </div>
+
+      {
+        note && (
+          <aside class="note">
+            <span class="eyebrow">Why it's saved</span>
+            <p>{note}</p>
+          </aside>
+        )
+      }
+
+      <dl class="facts" data-pagefind-ignore>
+        <div>
+          <dt>Category</dt>
+          <dd><a href={`/links/${entry.data.category}`}>{categoryName}</a></dd>
+        </div>
+        <div>
+          <dt>Priority</dt>
+          <dd><span class={`pill p-${priority}`}>{priority}</span></dd>
+        </div>
+        <div>
+          <dt>Added</dt>
+          <dd><time datetime={date_added}>{date_added}</time></dd>
+        </div>
+        {
+          audience?.length && (
+            <div>
+              <dt>Audience</dt>
+              <dd>{audience.map((a) => a.replace(/-/g, ' ')).join(', ')}</dd>
+            </div>
+          )
+        }
+        {
+          added_by && (
+            <div>
+              <dt>Added by</dt>
+              <dd>
+                <a href={`https://github.com/${added_by}`} rel="noopener">
+                  @{added_by}
+                </a>
+              </dd>
+            </div>
+          )
+        }
+      </dl>
+
+      <div class="tags">
+        {tags.map((tag) => <a class="tag" href={`/links?tags=${tag}`}>#{tag}</a>)}
+      </div>
+    </article>
+
+    {
+      alternatives.length > 0 && (
+        <section class="alts">
+          <div class="section-head">
+            <div>
+              <h2>Alternatives to {title}</h2>
+              <p class="muted">
+                Similar entries in the directory. Links are two-way — an entry appears here
+                whether it names {title} or {title} names it.
+              </p>
+            </div>
+          </div>
+
+          <div class="grid">
+            {alternatives.map((alt) => (
+              <div class="alt-cell">
+                <EntryCard item={alt} />
+                {!declared.has(alt.slug) && (
+                  <span class="reverse" title={`${alt.title} lists ${title} as an alternative`}>
+                    ↩ links back here
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )
+    }
+  </div>
+</Layout>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .page {
+    padding-block: var(--sp-6) var(--sp-8);
+    max-width: 860px;
+  }
+
+  .crumbs {
+    display: flex;
+    gap: var(--sp-2);
+    font-size: var(--text-sm);
+    color: var(--fg-subtle);
+    margin-bottom: var(--sp-5);
+    flex-wrap: wrap;
+  }
+
+  .crumbs a {
+    text-decoration: none;
+  }
+
+  .entry-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+  }
+
+
+  h1 {
+    font-size: var(--text-3xl);
+  }
+
+  .host {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+    text-decoration: none;
+  }
+
+  .host:hover {
+    color: var(--accent);
+  }
+
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--fg-muted);
+    margin-top: var(--sp-4);
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--sp-2);
+    margin-top: var(--sp-5);
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--sp-2) var(--sp-5);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    color: var(--fg);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .btn.primary:hover {
+    background: var(--accent-hover);
+    color: var(--accent-fg);
+  }
+
+  .note {
+    margin-top: var(--sp-6);
+    padding: var(--sp-4);
+    background: var(--accent-subtle);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius);
+  }
+
+  .note p {
+    margin-top: var(--sp-1);
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--sp-4);
+    margin-top: var(--sp-6);
+    padding-block: var(--sp-5);
+    border-block: 1px solid var(--border);
+  }
+
+  dt {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-subtle);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 2px var(--sp-2);
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    text-transform: capitalize;
+    font-size: var(--text-xs);
+  }
+
+  .p-high {
+    background: var(--priority-high-bg);
+    color: var(--priority-high);
+  }
+  .p-medium {
+    background: var(--priority-medium-bg);
+    color: var(--priority-medium);
+  }
+  .p-low {
+    background: var(--priority-low-bg);
+    color: var(--priority-low);
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-5);
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    padding: var(--sp-1) var(--sp-3);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--fg-muted);
+    text-decoration: none;
+    transition: all 0.14s;
+  }
+
+  .tag:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  .alts {
+    margin-top: var(--sp-8);
+    padding-top: var(--sp-6);
+    border-top: 1px solid var(--border);
+  }
+
+  .alts h2 {
+    font-size: var(--text-xl);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--sp-4);
+  }
+
+  .alt-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .reverse {
+    font-size: var(--text-xs);
+    color: var(--fg-subtle);
+    padding-left: var(--sp-2);
+  }
+
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    h1 {
+      font-size: var(--text-2xl);
+    }
+  }
+</style>

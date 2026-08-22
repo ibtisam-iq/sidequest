@@ -146,3 +146,89 @@ pty automation produced no captured output), so verification was done two better
 **Next:** Phase 5 — the Astro site: content collections reading repo-root `data/`, landing page,
 `/links` and `/companies` browsing with pagination, entry pages, Pagefind search, and the SEO set
 (sitemap, robots.txt, 404, llms.txt, JSON-LD).
+
+---
+
+## 2026-08-22 — Phases 5 & 6/10 (~65%) — Astro site, alternatives, dark mode, responsive
+
+**Astro 7 wiring**
+
+- `site/src/content.config.ts` — `links` and `companies` load from the **repo-root `data/`**
+  directory via `glob({ base: new URL('../../data/…') })`, with `generateId` returning the bare
+  filename so `alternatives: [obsidian]` stays human-writable. No copying, no symlinks.
+- `taxonomy/categories.yaml` loads via `file()` with an explicit parser, since the registry is
+  keyed by slug **and** type — the same slug can legitimately exist for both entity types.
+- `scripts/gen-zod-schemas.mjs` generates the zod schemas from `schema/*.json` at
+  `predev`/`prebuild`, so the JSON Schema stays the single source of truth.
+
+**Pages** (28 built): landing page, `/links` + `/companies` browse, paginated
+`/{links,companies}/<group>/[...page]` at 24/page, entry detail pages under `entry/<slug>`,
+`/search`, a real `404.astro`, and a prerendered `/api/entries.json`.
+
+Entries are grouped into a Map **once** before iterating categories in `getStaticPaths` — O(n)
+rather than O(n×categories), which is the difference between a fast build and a crawling one at
+scale.
+
+**Browse design decision.** Cards are rendered server-side and filtering toggles visibility on the
+existing DOM nodes, rather than re-rendering from JSON on the client. This keeps card markup in
+exactly one place (`EntryCard.astro`), so a filtered view can never drift from the server-rendered
+one, and every entry stays in the HTML with JS off. The cost is page weight growing with the
+dataset — fine into the low thousands, and the threshold for switching to client-side rendering is
+documented in `Browse.astro`. Per-category pages stay paginated regardless, so the crawlable path
+never depends on it.
+
+**Alternatives (Phase 6).** Built once per build in `site/src/lib/data.ts`, unioning forward and
+reverse references. Reverse-only relationships get a "↩ links back here" marker.
+
+**Dark mode.** Token-based, three-state (system/light/dark), with a blocking inline script in
+`<head>` so there is no flash of the wrong theme. Zero dependencies.
+
+**SEO.** `@astrojs/sitemap` (confirmed working on Astro 7 — the fallback was not needed),
+`robots.txt`, `llms.txt`, per-page title/description/OG/Twitter tags, JSON-LD
+(`CollectionPage`/`ItemList`/`Organization`/`BreadcrumbList`), and paginated pages canonicalising
+to page 1.
+
+### Verified in a real browser, not assumed from a green build
+
+| Check | Result |
+|---|---|
+| Filter chips: AND across facets, OR within one | correct in every combination tried |
+| Filter state in URL + restored on reload | works, chips re-press |
+| No-results state and Clear | works |
+| Sort toggle | "Top picks" correctly lifts high-priority Warp above a newer medium entry |
+| Alternatives both directions | all 3 pairs; reverse-only correctly flagged; no section when empty |
+| Companies facets | country, industry, hiring, remote, size all filter correctly |
+| Theme | system → light → dark cycle, persists across reload, no flash |
+| Mobile 375px | single column, no horizontal overflow (`scrollWidth === clientWidth`) |
+| Console / network | no errors; the only 404 was a deliberate one |
+| 404 page | own title, `noindex`, excluded from sitemap, not a homepage clone |
+| Search | returns correct results, themed, `?q=` seeding works |
+
+### Bugs found and fixed during that verification
+
+1. **Broken favicons left empty grey squares.** The letter fallback only triggered when a URL had
+   no host, not when the third-party icon service 404'd. Added `Favicon.astro`, which renders the
+   initial underneath and removes the `<img>` on error. Verified by dispatching a synthetic error.
+2. **Pagefind UI was completely unstyled.** Importing `@pagefind/default-ui` from npm gives the JS
+   but no stylesheet. Switched to the CLI-generated `/pagefind/pagefind-ui.{js,css}`, which also
+   guarantees the UI matches the index version, and dropped the npm dependency.
+3. **Search excerpts read "CountryPakistan. Industryfintech".** Pagefind concatenates `<dt>`/`<dd>`
+   without separators. Excluded the fact lists from the index and added a visually-hidden prose
+   sentence in their place — excerpts now read naturally and `fintech` is still searchable.
+4. **The Hiring facet never rendered.** Single-option facets were being dropped as noise, which is
+   right in general but wrong for a toggle like "actively hiring". Added an `alwaysShow` opt-in.
+5. **Zod deprecations in generated code.** `json-schema-to-zod` emits the Zod 3 style
+   (`z.string().url()`); the generator now rewrites these to `z.url()` / `z.iso.date()`, so the
+   output won't break on the next Zod major. Also switched `z` from the deprecated `astro:content`
+   re-export to `astro/zod`.
+
+`astro check` is clean: **0 errors, 0 warnings, 0 hints.**
+
+One non-issue worth recording: wheel-scroll screenshots in the headless browser produced a
+stale-frame compositing artifact that looked like a broken layout. Confirmed via DOM geometry that
+the page was correct; verification used tall viewports instead.
+
+**Also expanded the seed data** to 15 entries (9 links, 6 companies) across two countries, so the
+country and hiring facets have real values to exercise rather than being untestable.
+
+**Next:** Phase 7 — Issue Forms, `parse-issue-form.mjs`, and the three workflows.

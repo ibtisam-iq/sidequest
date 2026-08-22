@@ -10,3 +10,6 @@ site/src/schemas/generated/
 .env
 .env.*
 !.env.example
+
+# Astro
+site/.astro/

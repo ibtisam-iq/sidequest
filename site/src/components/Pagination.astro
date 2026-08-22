@@ -1,0 +1,130 @@
+---
+import type { Page } from 'astro';
+
+interface Props {
+  page: Page<unknown>;
+}
+
+const { page } = Astro.props;
+
+if (page.lastPage <= 1) return new Response(null, { status: 200 });
+
+/** Compact window around the current page so this stays usable at hundreds of pages. */
+const WINDOW = 2;
+const pages: (number | '…')[] = [];
+let previous = 0;
+
+for (let n = 1; n <= page.lastPage; n++) {
+  const inWindow =
+    n === 1 || n === page.lastPage || Math.abs(n - page.currentPage) <= WINDOW;
+  if (!inWindow) continue;
+  if (previous && n - previous > 1) pages.push('…');
+  pages.push(n);
+  previous = n;
+}
+
+const hrefFor = (n: number) => (n === 1 ? page.url.first ?? page.url.current : `${page.url.first ?? ''}/${n}`.replace(/\/{2,}/g, '/'));
+---
+
+<nav class="pagination" aria-label="Pagination" data-pagefind-ignore>
+  <a
+    class:list={['nav-btn', { disabled: !page.url.prev }]}
+    href={page.url.prev}
+    aria-disabled={!page.url.prev}
+    rel="prev"
+  >
+    ← Previous
+  </a>
+
+  <ol>
+    {
+      pages.map((n) =>
+        n === '…' ? (
+          <li class="gap" aria-hidden="true">
+            …
+          </li>
+        ) : (
+          <li>
+            <a
+              href={hrefFor(n)}
+              class:list={['page-link', { active: n === page.currentPage }]}
+              aria-current={n === page.currentPage ? 'page' : undefined}
+            >
+              {n}
+            </a>
+          </li>
+        ),
+      )
+    }
+  </ol>
+
+  <a
+    class:list={['nav-btn', { disabled: !page.url.next }]}
+    href={page.url.next}
+    aria-disabled={!page.url.next}
+    rel="next"
+  >
+    Next →
+  </a>
+</nav>
+
+<style>
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin-top: var(--sp-7);
+    flex-wrap: wrap;
+  }
+
+  ol {
+    display: flex;
+    gap: var(--sp-1);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-btn,
+  .page-link {
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    height: 36px;
+    padding-inline: var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    transition: all 0.14s;
+  }
+
+  .nav-btn:hover,
+  .page-link:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  .page-link.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+    font-weight: 650;
+  }
+
+  .disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .gap {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    color: var(--fg-subtle);
+  }
+</style>

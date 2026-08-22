@@ -1,0 +1,137 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const description =
+  'Search the full sidequest directory — tools, repos, articles, courses, communities, job boards and companies.';
+---
+
+<Layout title="Search" description={description}>
+  {/*
+    Both assets are emitted by the pagefind CLI into dist/pagefind/ during `npm run build`, so
+    they are loaded by URL rather than imported from npm — that keeps the UI and the search index
+    on exactly the same version, and the npm package ships no stylesheet anyway.
+    Neither file exists under `astro dev`; the script below handles that.
+  */}
+  <link slot="head" rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+  <div class="wrap page">
+    <header class="page-head">
+      <p class="eyebrow">Directory</p>
+      <h1>Search</h1>
+      <p class="muted lede">Full-text search across every entry in the directory.</p>
+    </header>
+
+    <div id="search" data-pagefind-ignore></div>
+
+    <noscript>
+      <p class="empty">
+        Search needs JavaScript. You can still browse everything by
+        <a href="/links">category</a> or in the <a href="/companies">companies directory</a>.
+      </p>
+    </noscript>
+  </div>
+</Layout>
+
+<style is:global>
+  /* Map Pagefind's UI onto our own tokens so it follows the theme automatically. */
+  #search {
+    --pagefind-ui-scale: 0.9;
+    --pagefind-ui-primary: var(--accent);
+    --pagefind-ui-text: var(--fg);
+    --pagefind-ui-background: var(--bg-elevated);
+    --pagefind-ui-border: var(--border);
+    --pagefind-ui-tag: var(--bg-subtle);
+    --pagefind-ui-border-width: 1px;
+    --pagefind-ui-border-radius: var(--radius);
+    --pagefind-ui-font: var(--font-sans);
+  }
+
+  #search .pagefind-ui__search-input {
+    background: var(--bg-elevated);
+    color: var(--fg);
+  }
+
+  #search .pagefind-ui__result {
+    border-top: 1px solid var(--border);
+  }
+
+  #search .pagefind-ui__result-title a {
+    color: var(--fg);
+  }
+
+  #search .pagefind-ui__result-title a:hover {
+    color: var(--accent);
+  }
+
+  #search .pagefind-ui__result-excerpt {
+    color: var(--fg-muted);
+  }
+
+  #search mark {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+</style>
+
+<style>
+  .page {
+    padding-block: var(--sp-7) var(--sp-9);
+    max-width: 780px;
+  }
+
+  .page-head {
+    margin-bottom: var(--sp-6);
+  }
+
+  .page-head h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--sp-2);
+  }
+
+  .lede {
+    margin-top: var(--sp-2);
+  }
+</style>
+
+<script>
+  // Pagefind indexes built HTML, so its bundle only exists in dist/ after `astro build`.
+  // Under `astro dev` there is no index — that is expected, not a bug.
+  const container = document.getElementById('search');
+
+  function unavailable() {
+    if (!container) return;
+    container.innerHTML =
+      '<p class="empty">Search is generated during <code>npm run build</code>, so it is not ' +
+      'available on the dev server. Build the site and preview it to try search locally.</p>';
+  }
+
+  function start() {
+    const PagefindUI = (window as unknown as { PagefindUI?: new (o: unknown) => void }).PagefindUI;
+    if (!PagefindUI || !container) return unavailable();
+
+    new PagefindUI({
+      element: '#search',
+      showSubResults: true,
+      showImages: false,
+      pageSize: 12,
+      resetStyles: false,
+    });
+
+    // Seed the box from ?q= so the homepage search form lands straight on real results.
+    const query = new URLSearchParams(location.search).get('q');
+    if (!query) return;
+
+    const input = container.querySelector<HTMLInputElement>('input[type="text"]');
+    if (input) {
+      input.value = query;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  const script = document.createElement('script');
+  script.src = '/pagefind/pagefind-ui.js';
+  script.onload = start;
+  script.onerror = unavailable;
+  document.head.append(script);
+</script>

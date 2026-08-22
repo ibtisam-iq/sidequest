@@ -1,0 +1,142 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Browse from '../../components/Browse.astro';
+import CategoryNav from '../../components/CategoryNav.astro';
+import { getCardItems, getCategoriesWithCounts } from '../../lib/data';
+
+const items = (await getCardItems()).filter((i) => i.type === 'link');
+const categories = await getCategoriesWithCounts('links');
+
+const countOf = <T,>(list: T[], get: (item: T) => string[] | string) => {
+  const counts = new Map<string, number>();
+  for (const item of list) {
+    const values = get(item);
+    for (const value of Array.isArray(values) ? values : [values]) {
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+  }
+  return counts;
+};
+
+const tagCounts = countOf(items, (i) => i.tags);
+const audienceCounts = countOf(items, (i) => i.audience ?? []);
+
+const facets = [
+  {
+    key: 'group',
+    label: 'Category',
+    options: categories
+      .filter((c) => c.count > 0)
+      .map((c) => ({ value: c.slug, label: c.name, count: c.count })),
+  },
+  {
+    key: 'priority',
+    label: 'Priority',
+    options: ['high', 'medium', 'low']
+      .map((p) => ({
+        value: p,
+        label: p,
+        count: items.filter((i) => i.priority === p).length,
+      }))
+      .filter((o) => o.count > 0),
+  },
+  {
+    key: 'audience',
+    label: 'Audience',
+    options: [...audienceCounts]
+      .sort((a, b) => b[1] - a[1])
+      .map(([value, count]) => ({ value, label: value.replace(/-/g, ' '), count })),
+  },
+  {
+    key: 'tags',
+    label: 'Tags',
+    // Cap the tag list so the facet bar stays usable as tags grow into the hundreds.
+    options: [...tagCounts]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 24)
+      .map(([value, count]) => ({ value, label: `#${value}`, count })),
+  },
+];
+
+const description = `Browse all ${items.length} links in the sidequest directory — tools, GitHub repos, articles, books, courses, communities and remote job boards, filterable by category, priority, audience and tag.`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'All links · sidequest',
+  description,
+  url: new URL('/links', Astro.site).href,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: items.length,
+    itemListElement: items.slice(0, 25).map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.title,
+      url: new URL(item.href, Astro.site).href,
+    })),
+  },
+};
+---
+
+<Layout title="All links" description={description}>
+  <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <div class="wrap page">
+    <header class="page-head" data-pagefind-ignore>
+      <p class="eyebrow">Directory</p>
+      <h1>Links</h1>
+      <p class="muted lede">
+        Tools, repos, articles, books, courses, communities and job boards — {items.length} entries
+        across {categories.filter((c) => c.count > 0).length} categories.
+      </p>
+    </header>
+
+    <div class="layout">
+      <CategoryNav categories={categories} base="/links" current={null} />
+
+      <div class="content">
+        {
+          items.length ? (
+            <Browse items={items} facets={facets} />
+          ) : (
+            <p class="empty">No links yet.</p>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding-block: var(--sp-7) var(--sp-8);
+  }
+
+  .page-head {
+    margin-bottom: var(--sp-6);
+  }
+
+  .page-head h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--sp-2);
+  }
+
+  .lede {
+    margin-top: var(--sp-2);
+    max-width: 62ch;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    gap: var(--sp-6);
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12121a"/>
+      <stop offset="1" stop-color="#1b1730"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9b8cff"/>
+      <stop offset="1" stop-color="#6dcbe8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1010" cy="120" r="300" fill="#5b4bd6" opacity="0.18"/>
+  <rect x="80" y="176" width="54" height="54" rx="15" fill="url(#accent)"/>
+  <text x="152" y="220" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="42" font-weight="700" fill="#f0f0f4">sidequest</text>
+  <text x="80" y="330" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="68" font-weight="700" fill="#f0f0f4">Everything worth</text>
+  <text x="80" y="410" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="68" font-weight="700" fill="url(#accent)">remembering.</text>
+  <text x="80" y="486" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="27" fill="#a3a3b2">Tools · repos · articles · courses · communities · job boards · companies</text>
+  <text x="80" y="548" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="22" fill="#74748a">sidequest.ibtisam-iq.com</text>
+</svg>

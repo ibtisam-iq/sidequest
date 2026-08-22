@@ -1,0 +1,338 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EntryCard from '../components/EntryCard.astro';
+import { getData, getCardItems, getCategoriesWithCounts } from '../lib/data';
+
+const data = await getData();
+const items = await getCardItems();
+const [linkCategories, countries] = await Promise.all([
+  getCategoriesWithCounts('links'),
+  getCategoriesWithCounts('companies'),
+]);
+
+const recent = items.slice(0, 6);
+const featured = items.filter((i) => i.priority === 'high').slice(0, 6);
+
+const stats = [
+  { value: items.length, label: 'entries' },
+  { value: linkCategories.filter((c) => c.count > 0).length, label: 'categories' },
+  { value: data.companies.length, label: 'companies' },
+  { value: data.tagCounts.size, label: 'tags' },
+];
+
+const description =
+  'An open, curated directory of tools, GitHub repos, articles, books, courses, communities, remote job boards and notable tech companies — everything worth remembering, in one searchable place.';
+
+const populated = linkCategories.filter((c) => c.count > 0);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'sidequest',
+  description,
+  url: Astro.site?.href,
+  isPartOf: { '@type': 'WebSite', name: 'sidequest', url: Astro.site?.href },
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: items.length,
+    itemListElement: recent.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.title,
+      url: new URL(item.href, Astro.site).href,
+    })),
+  },
+};
+---
+
+<Layout title="sidequest" description={description}>
+  <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <section class="hero" data-pagefind-ignore>
+    <div class="wrap hero-inner">
+      <p class="eyebrow">Open source · MIT · {items.length} entries</p>
+      <h1>Everything worth remembering,<br /><span class="grad">in one place.</span></h1>
+      <p class="lede">
+        A curated directory of tools, repos, articles, courses, communities, remote job boards and
+        notable tech companies — collected while browsing, kept as plain YAML in git.
+      </p>
+
+      <form class="search-cta" action="/search" method="get" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-3.5-3.5"></path>
+        </svg>
+        <input
+          type="search"
+          name="q"
+          placeholder="Search tools, companies, tags…"
+          aria-label="Search the directory"
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      <dl class="stats">
+        {
+          stats.map((stat) => (
+            <div>
+              <dt>{stat.label}</dt>
+              <dd>{stat.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <section class="wrap block">
+    <div class="section-head">
+      <div>
+        <h2>Browse by category</h2>
+        <p class="muted">{populated.length} categories with entries.</p>
+      </div>
+      <a class="more" href="/links">All links →</a>
+    </div>
+
+    <div class="cat-grid">
+      {
+        populated.map((category) => (
+          <a class="cat" href={`/links/${category.slug}`}>
+            <span class="cat-name">{category.name}</span>
+            <span class="cat-count">{category.count}</span>
+          </a>
+        ))
+      }
+      {
+        countries.filter((c) => c.count > 0).map((country) => (
+          <a class="cat cat-company" href={`/companies/${country.slug}`}>
+            <span class="cat-name">{country.name}</span>
+            <span class="cat-count">{country.count}</span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  {
+    featured.length > 0 && (
+      <section class="wrap block">
+        <div class="section-head">
+          <div>
+            <h2>Top picks</h2>
+            <p class="muted">The entries marked high priority.</p>
+          </div>
+        </div>
+        <div class="grid">
+          {featured.map((item) => (
+            <EntryCard item={item} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <section class="wrap block">
+    <div class="section-head">
+      <div>
+        <h2>Recently added</h2>
+        <p class="muted">The newest arrivals across the whole directory.</p>
+      </div>
+      <a class="more" href="/links">Browse all →</a>
+    </div>
+    <div class="grid">
+      {recent.map((item) => <EntryCard item={item} />)}
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero {
+    padding-block: var(--sp-9) var(--sp-8);
+    background:
+      radial-gradient(60rem 30rem at 50% -12rem, var(--accent-subtle), transparent 70%),
+      var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-inner {
+    text-align: center;
+    max-width: 760px;
+  }
+
+  h1 {
+    font-size: clamp(2.25rem, 6vw, var(--text-4xl));
+    margin-top: var(--sp-3);
+    letter-spacing: -0.035em;
+  }
+
+  .grad {
+    background: linear-gradient(100deg, var(--accent), var(--company));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .lede {
+    font-size: var(--text-lg);
+    color: var(--fg-muted);
+    margin-top: var(--sp-4);
+    margin-inline: auto;
+    max-width: 60ch;
+  }
+
+  .search-cta {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-6) auto 0;
+    max-width: 520px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    padding: var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-4);
+    box-shadow: var(--shadow);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .search-cta:focus-within {
+    border-color: var(--accent);
+    box-shadow: var(--shadow), var(--ring);
+  }
+
+  .search-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--fg-subtle);
+    stroke-width: 2;
+    stroke-linecap: round;
+    flex-shrink: 0;
+  }
+
+  .search-cta input {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: var(--sp-3) 0;
+    outline: none;
+    min-width: 0;
+  }
+
+  .search-cta button {
+    border: none;
+    background: var(--accent);
+    color: var(--accent-fg);
+    padding: var(--sp-2) var(--sp-5);
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .search-cta button:hover {
+    background: var(--accent-hover);
+  }
+
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-7);
+    margin-top: var(--sp-7);
+    flex-wrap: wrap;
+  }
+
+  .stats div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+
+  .stats dd {
+    font-size: var(--text-2xl);
+    font-weight: 680;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stats dt {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-subtle);
+    font-weight: 600;
+  }
+
+  .block {
+    margin-top: var(--sp-8);
+  }
+
+  .more {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .cat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--fg);
+    font-weight: 550;
+    font-size: var(--text-sm);
+    transition: all 0.15s;
+  }
+
+  .cat:hover {
+    border-color: var(--accent-border);
+    background: var(--accent-subtle);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .cat-company:hover {
+    border-color: var(--company-border);
+    background: var(--company-bg);
+    color: var(--company);
+  }
+
+  .cat-count {
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-subtle);
+    background: var(--bg-subtle);
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-full);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: var(--sp-4);
+  }
+
+  @media (max-width: 640px) {
+    .hero {
+      padding-block: var(--sp-7) var(--sp-6);
+    }
+    .stats {
+      gap: var(--sp-5);
+    }
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
