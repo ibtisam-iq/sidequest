@@ -721,3 +721,97 @@ second line on narrower screens instead, which reads better anyway at 13 top-lev
 
 **Next:** Phase 3 - the bulk-import pipeline (`scripts/import-bulk.mjs` + a review step), then
 actually running the ~200-row import (CSV, URL list, named-app lookups) through it.
+
+---
+
+## 2026-08-23 - Phase 3/6 - the real bulk import ran
+
+`scripts/import-bulk.mjs` and `scripts/import-review.mjs` are built and the real ~200-entry
+import is done, not just the tooling.
+
+**Pipeline shape**, exactly as speced: `import-bulk.mjs` reads a CSV and/or a plain URL list,
+normalizes every URL, skips anything already in the dataset, guesses a category/tags/legal_risk,
+and writes `import/review.yaml` - never touching `data/links/**` directly. `import-review.mjs` is
+the only script that promotes a proposal into real data, either one at a time interactively or in
+batch above a confidence bar; either way it fetches the favicon immediately and validates once at
+the end.
+
+**The CSV parser is hand-rolled** (`scripts/lib/csv.mjs`) rather than a dependency, because the
+one thing that actually matters - quoted fields with embedded commas and newlines, which the task
+explicitly warned about - is exactly what a naive `.split('\n')` gets wrong silently. Verified
+byte-for-byte against Python's own `csv` module across all 166 real rows before trusting it for
+anything: zero mismatches.
+
+**Categorization is a domain lookup table, not a generic algorithm tuned blind.** Every row in the
+real CSV and URL list was actually read (not sampled) to build
+`scripts/lib/import-heuristics.mjs`'s ~150-entry domain table, with a keyword fallback (mostly
+carrying the Maulana Ishaq / karbala / khilafat lecture titles, which share no common domain) for
+anything the table doesn't cover.
+
+**The run, against the real data:** 218 rows read (166 CSV + 52 URL-list - the task's 23 plain
+URLs plus the named-app lookups). 13 excluded (owner's own profile/contact links, two Facebook
+reels, a specific song, a specific YouTube short, three one-off purchase listings). 2 deduped
+(already in the dataset or duplicated within the batch). 202 approved. 1 left in `review.yaml`
+because it has no defensible category fit (a Muslim matchmaking service) rather than forced into
+one - the task's own instruction was to flag rather than guess when genuinely unsure, and unlike
+the lecture entries this one isn't ephemera or a bad heuristic miss, it's a real resource with no
+home in this taxonomy yet.
+
+**Named-app URL lookups.** Looked up real official domains for the Pakistan payment apps, crypto/
+remittance apps, AI chat assistants, and AI routing tools the task listed by name. Included only
+the ones confidently verifiable (easypaisa, NayaPay, SadaPay, Zindigi, YAP Pakistan, PayPro;
+Binance, NoOnes, RedotPay, Trust Wallet, Bybit, Wise, Payoneer, PAYEER, Skrill, PayPal, Stripe,
+Grey, Neteller, Afriex, nsave, Wallet of Satoshi; ChatGPT, Perplexity, Gemini, Z.ai, Grok,
+DeepSeek; OpenRouter). Skipped rather than guessed: aik, Digitt+, Tevau, Nostro, SadaBiz, Elevate
+Pay, OmniRoute - genuine uncertainty about the exact official domain, and the task was explicit
+that guessing wrong here is worse than leaving a gap.
+
+### Two real bugs, found only by actually running this at scale
+
+1. **A title in Urdu script crashed the entire batch.** `slugify()` strips everything outside
+   `[a-z0-9]`, and a title with nothing else left produces an empty string -
+   `resolveEntryPath` threw, and the process died with 126 entries already written but
+   `review.yaml` still listing all 203 as pending, because the file was only rewritten at the very
+   end of a successful run. Fixed the immediate cause (fall back to the URL's hostname for the
+   filename only - the real title is untouched in the YAML itself, confirmed rendering correctly
+   with full Urdu/RTL text in the browser), and, more importantly, wrapped the entire write loop
+   in `try`/`catch`/`finally` so one bad row can never again take the rest of a batch down with it,
+   and whatever remains unwritten is always persisted regardless of how the run ends.
+2. **Categorization ran on the already-cleaned display title**, silently losing the exact
+   keyword - a lecturer's name cut by the title-shortening pass - that a handful of entries needed
+   to classify correctly. Reordered so raw source text (title before cleanup, plus excerpt, note,
+   and the CSV's own tags column) drives the heuristic, and the cosmetic cleanup only touches what
+   gets displayed and stored.
+
+**Also fixed along the way:** a scraped title over the schema's 120-character limit would have
+failed validation outright, not just looked bad - added a real cleanup pass (keep the first
+meaningful segment of a pipe/dash-separated SEO title) with a hard-truncate safety net, rather
+than trusting every source title as-is. And one broken scrape (an error page's title, literally
+"ERROR: The request could not be satisfied", for what is actually an area-code lookup tool) got a
+real title by hand. A misleading run summary that reported "133 left pending" when only 1 entry
+genuinely was pending - the other 132 were already-written duplicates from the interrupted first
+run - is now counted and labelled separately, so a future run's output can be trusted at a glance.
+
+### Verified, not assumed
+
+| Check | Result |
+|---|---|
+| Excluded URLs anywhere in `data/` | zero - grepped for every one of them directly |
+| `legal_risk` on every shadow-libraries entry | all 17, confirmed programmatically |
+| `legal_risk` outside shadow-libraries | zero, confirmed programmatically |
+| Dataset-wide validation | 218/218 valid, 1 warning (a genuinely still-empty subcategory) |
+| Urdu-titled entry, real browser | renders correctly end to end - title, RTL text, breadcrumbs, favicon fallback |
+| Mega-menu with real category counts | AI Tools' 5 subcategories all populated and correct |
+| Shadow Libraries category page | all 17 entries show the legal-risk badge |
+| Pakistan Payment Apps subcategory | exactly the 6 confidently-verified apps, correct favicons |
+| Search | finds ChatGPT both as a direct entry and mentioned in another entry's excerpt |
+| Console errors across the whole session | none |
+
+`npm run validate`: 218/218 (212 links, 6 companies). `npm test`: **78 passing** (18 new, covering
+the CSV parser against real edge cases, the exclusion list in both directions, and the
+categorization heuristic including the two bugs above). `astro check`: 0/0/0. Site builds to 270
+pages, Pagefind indexes all 218 entry pages.
+
+**Next:** Phase 4 - the remaining verification items from the original task (mobile mega-menu tap,
+already covered in the earlier UI phase, holds up against the larger real dataset too) and a final
+wrap-up pass.
