@@ -19,6 +19,8 @@
     "fetch-favicons": "node scripts/fetch-favicons.mjs",
     "add-link": "node scripts/add-link.mjs",
     "add-company": "node scripts/add-company.mjs",
+    "import-bulk": "node scripts/import-bulk.mjs",
+    "import-review": "node scripts/import-review.mjs",
     "test": "node --experimental-test-module-mocks --test \"scripts/lib/*.test.mjs\""
   },
   "dependencies": {

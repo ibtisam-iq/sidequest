@@ -13,3 +13,7 @@ site/src/schemas/generated/
 
 # Astro
 site/.astro/
+
+# Bulk-import scratch: proposed entries pending human review, and any raw source files staged
+# for import. Never committed as final data - only what a reviewer approves reaches data/links/.
+import/

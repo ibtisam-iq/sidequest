@@ -1,0 +1,12 @@
+url: https://localstack.cloud/pricing
+title: LocalStack Pricing
+category: dev-tools
+description: >-
+  Review LocalStack's pricing for powerful local cloud development features. See how our plans
+  support individual developers and enterprise teams.
+tags:
+  - cloud
+  - local-development
+priority: medium
+date_added: '2026-02-17'
+source: local

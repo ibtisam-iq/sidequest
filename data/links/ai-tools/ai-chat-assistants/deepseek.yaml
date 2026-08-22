@@ -1,0 +1,10 @@
+url: https://chat.deepseek.com/
+title: DeepSeek
+category: ai-tools/ai-chat-assistants
+tags:
+  - chatbot
+  - llm
+  - open-source
+priority: medium
+date_added: '2026-08-22'
+source: local

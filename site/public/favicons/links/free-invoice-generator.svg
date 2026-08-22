@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 100" role="img" aria-label="Invoice Generator">
+  <style>
+    .st0{fill:#1E2838}
+    .st1{fill:#44CA6A}
+    .st2{fill:#51C5F3}
+  </style>
+  <g>
+    <rect x="37.62" y="45.29" class="st0" width="18.82" height="9.41"/>
+    <rect x="37.62" y="23.51" class="st0" width="28.22" height="9.41"/>
+    <rect x="37.62" y="67.07" class="st0" width="56.46" height="9.41"/>
+    <polygon class="st1" points="94.08,0 94.08,23.51 117.59,23.51"/>
+    <polygon class="st1" points="84.67,0 37.62,0 37.62,23.51 65.84,23.51 65.84,32.93 37.62,32.93 37.62,45.29 56.44,45.29 56.44,54.71 37.62,54.71 37.62,67.07 94.08,67.07 94.08,76.49 37.62,76.49 37.62,100 117.59,100 117.59,32.93 84.67,32.93"/>
+    <rect x="18.81" y="23.51" class="st2" width="18.81" height="9.41"/>
+    <rect y="45.29" class="st2" width="37.62" height="9.41"/>
+    <rect x="9.41" y="67.07" class="st2" width="28.21" height="9.41"/>
+  </g>
+</svg>
