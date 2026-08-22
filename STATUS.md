@@ -880,3 +880,65 @@ reference to a `referral-links` category that no longer exists in the new tree w
 **Next:** the original task's final wrap-up - re-confirm the mega-menu and legal-risk verification
 items still hold against the full 218-entry dataset (already spot-checked in Phase 3), then close
 out.
+
+## 2026-08-23 - Phase 5/6 - final wrap-up verification, task closed out
+
+A real end-to-end pass in a real browser (desktop and 375px mobile), against the built site
+(`astro build && pagefind --site dist`, not `astro dev` - search only works post-build), plus a
+few scripted checks that don't need a browser. Nothing here uncovered a new bug; this phase exists
+to prove the two-level taxonomy and bulk import hold up at the full 218-entry scale, not just on
+the handful of entries spot-checked while each earlier phase was being built.
+
+**Desktop (1280px):**
+
+- Homepage stats correct: 218 entries, 13 categories, 6 companies, 165 tags.
+- Mega-menu hover-expand: hovering "AI Tools" opens its 5-subcategory panel with correct counts;
+  clicking "AI Coding Agents" navigates and shows `Links / AI Tools / AI Coding Agents`
+  breadcrumbs and its 5 real entries.
+- Shadow Libraries category page: all 17 entries show the "Legal risk - not an endorsement" badge,
+  no exceptions.
+- Anna's Archive entry page: full breadcrumb trail plus the prominent warning banner ("May involve
+  copyright infringement in your jurisdiction - included for reference, not an endorsement.").
+- Alternatives resolve bidirectionally: Ghostty declares `alternatives: [warp]`; Warp's own page
+  (which declares nothing) shows Ghostty under "Alternatives to Warp" - the asymmetric seed data
+  planted specifically to prove the reverse-map isn't just echoing a forward reference.
+- Search (Pagefind, against the built site): "ChatGPT" returns both the direct entry and a
+  Learning & Courses entry that only mentions it in body text - full-text indexing confirmed
+  working, not just title matching.
+- Dark/light theme toggle switches instantly with no flash, and a hard reload of `/search` in
+  light mode stayed light - persistence confirmed, not just the toggle click.
+- Zero console errors on every page visited across the whole pass.
+
+**Mobile (375px):**
+
+- Mega-menu collapses to a wrapped, static (non-floating) layout as designed.
+- Tap-to-open verified two ways: the `computer` tool's synthetic taps intermittently failed to
+  land precisely on the 22px toggle button at this viewport (a tooling/coordinate limitation, not
+  a page bug - screenshots showed only a hover highlight, no state change) - so it was confirmed
+  directly against the live DOM: `toggle.click()` in the page context set `data-open="true"` and
+  flipped `.mega-panel` to `display: block`, and a direct navigation to the resulting subcategory
+  URL rendered correctly with breadcrumbs intact. The click handler and the `max-width: 900px`
+  panel CSS are correct - this was purely a limitation of driving a 22px target through emulated
+  touch coordinates, not a regression.
+- Companies page facets (country/industry pills, Recent/Hiring-first toggle) reflow correctly at
+  this width with no overlap or clipping.
+
+**Scripted checks:**
+
+- `validate.mjs` actually rejects a shadow-libraries entry missing `legal_risk` - wrote a
+  throwaway test file under `data/links/shadow-libraries/books-academic-papers/`, ran
+  `npm run validate`, confirmed the exact error ("category ... requires legal_risk: true - every
+  entry under shadow-libraries must disclose this, it is not optional"), then deleted it and
+  re-ran validate clean (218/218).
+- Re-grepped the full `data/links/` tree for every excluded personal-profile URL substring
+  (`x.com/ibtisam`, `facebook.com/ibtisam`, `linkedin.com/in/ibtisam`, `wa.me/`,
+  `buymeacoffee.com/ibtisam`, the owner's own GitHub profile) - zero matches, confirming the
+  exclusion list held through everything written since Phase 3, not just at bulk-import time.
+
+**Final state:** `npm test` 86/86, `npm run validate` 218/218 (212 links, 6 companies, 1
+pre-existing warning for a genuinely still-empty subcategory), `astro check` 0/0/0, site builds to
+270 pages with Pagefind indexing all 218 entry pages. Both contribution paths now correctly handle
+the two-level taxonomy: local CLIs (Phase 1), and the issue-form pipeline (Phase 4). Docs
+(README, CONTRIBUTING, CLAUDE.md, the issue form) all describe the tree as it actually exists.
+
+This closes out the two-level taxonomy restructuring and bulk-import task.
