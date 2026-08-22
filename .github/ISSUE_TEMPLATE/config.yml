@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question or suggest an idea
+    url: https://github.com/ibtisam-iq/sidequest/discussions
+    about: For anything that isn't adding an entry — questions, ideas, feedback on the site.
+  - name: Contributing guide
+    url: https://github.com/ibtisam-iq/sidequest/blob/main/CONTRIBUTING.md
+    about: How the two contribution paths work, and how the open taxonomy registry works.

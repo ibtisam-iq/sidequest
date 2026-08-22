@@ -1,0 +1,100 @@
+name: Add a company
+description: Suggest a tech company worth knowing about, for the companies directory.
+title: 'Add company: '
+labels: ['new-company']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing. Submitting this form opens a pull request automatically —
+        you don't need to touch any YAML.
+
+        This is for the **companies directory** (organised by country, filterable by industry and
+        hiring status). For a tool, article or anything else, use *Add a link* instead.
+
+  - type: input
+    id: name
+    attributes:
+      label: Company name
+      placeholder: Arbisoft
+    validations:
+      required: true
+
+  - type: input
+    id: website
+    attributes:
+      label: Website
+      placeholder: https://arbisoft.com
+    validations:
+      required: true
+
+  - type: input
+    id: country
+    attributes:
+      label: Country
+      description: >
+        Where the company is primarily based, e.g. `pakistan`, `united-states`, `canada`. Use
+        `remote-friendly` if it has no meaningful home country. A new country is registered
+        automatically.
+      placeholder: pakistan
+    validations:
+      required: true
+
+  - type: input
+    id: industry
+    attributes:
+      label: Industry
+      description: Free-form, one value, e.g. fintech, saas, consulting, software-development.
+      placeholder: fintech
+    validations:
+      required: true
+
+  - type: input
+    id: careers-url
+    attributes:
+      label: Careers URL
+      placeholder: https://arbisoft.com/careers
+
+  - type: dropdown
+    id: hiring-status
+    attributes:
+      label: Hiring status
+      description: Leave as Unknown unless you're confident — this goes stale quickly.
+      options:
+        - Unknown
+        - Actively hiring
+        - Not hiring
+      default: 0
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      options:
+        - Startup
+        - Mid
+        - Enterprise
+
+  - type: dropdown
+    id: remote-policy
+    attributes:
+      label: Remote policy
+      options:
+        - Unknown
+        - Remote
+        - Hybrid
+        - Onsite
+      default: 0
+
+  - type: textarea
+    id: rating
+    attributes:
+      label: Why is it notable?
+      description: What makes this company worth knowing about — engineering culture, remote setup, the work itself.
+
+  - type: input
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated, free-form.
+      placeholder: software-house, product-engineering, lahore

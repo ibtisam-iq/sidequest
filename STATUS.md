@@ -232,3 +232,58 @@ the page was correct; verification used tall viewports instead.
 country and hiring facets have real values to exercise rather than being untestable.
 
 **Next:** Phase 7 — Issue Forms, `parse-issue-form.mjs`, and the three workflows.
+
+---
+
+## 2026-08-22 — Phase 7/10 (~80%) — Issue forms and GitHub Actions
+
+**Built**
+
+- `.github/ISSUE_TEMPLATE/add-link.yml` and `add-company.yml`, auto-labelling `new-link` /
+  `new-company`, plus `config.yml` and a PR template.
+- `scripts/lib/issue-form.mjs` — parses the `### Label` / value markdown GitHub renders a form
+  into, then reuses the same normalization the local CLIs use.
+- `scripts/parse-issue-form.mjs` — the workflow entry point. Exit 0 written, 1 invalid,
+  2 duplicate.
+- `validate.yml` (PR gate), `issue-to-pr.yml`, `deploy.yml`.
+
+**Category fields are free text, not dropdowns.** A dropdown would go stale every time the
+taxonomy grows and would need the form regenerated. Free text plus the fuzzy matcher scales to
+hundreds of categories with no form maintenance, and a near-match becomes a warning in the PR body
+for a human to judge.
+
+**Security.** The issue body is untrusted input from anyone on the internet, so: it reaches Node
+only through `env:` (never interpolated into a `run:` string, which would be a script-injection
+hole in an issue-triggered workflow), and filenames come only from `slugify()` output, which is
+strictly `[a-z0-9-]`. There is a test asserting `../../../../etc/passwd` as a title cannot escape
+the data directory.
+
+**Verified by running the parser against realistic submissions**
+
+| Case | Result |
+|---|---|
+| Valid link, messy input | `https://www.zed.dev/?utm_source=hn` → `https://zed.dev`, tags normalized and de-duplicated |
+| URL already in the directory | exit 2, names the existing file — no PR opened |
+| New category near an existing one (`AI Tool`) | exit 0 **with a warning note** for the reviewer, not a failure |
+| Invalid submission | exit 1, all five problems reported at once rather than just the first |
+| Genuinely new country (`Canada`) | exit 0, note that it registers a new country |
+| `--dry-run` | confirmed it wrote nothing (`git status` clean afterwards) |
+
+**A contract test between the forms and the parser.** The parser keys off human-readable field
+*labels*, because that is all GitHub puts in the issue body — so renaming a label in a form would
+silently drop that field from every future submission, with no error. `issue-form-contract.test.mjs`
+reconstructs the exact body GitHub would render from each form and asserts the round-trip, checks
+every dropdown option slugifies onto a real schema enum value, and checks the forms still apply the
+labels the workflow routes on.
+
+**That guard was itself mutation-tested**: renaming a label made it fail with "a form field is
+missing from this test fixture", and restoring the label made it pass again. A guard that cannot
+fail is worthless, so this was worth confirming.
+
+All six workflow/template YAML files parse. `npm test` is now **50 tests passing**.
+
+**Not yet done:** the workflows have not been exercised against real GitHub yet — that needs a push
+and a live test issue, and the user asked to be consulted before the public issue and the Pages
+settings change.
+
+**Next:** Phase 8 (Pages + DNS — needs the user's go-ahead) and Phase 9 (README, CONTRIBUTING).

@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Lets a deploy be re-run from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; queue instead of cancelling so main always lands.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Validate and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install script dependencies
+        run: npm ci
+
+      # Validation gates the deploy: a broken dataset must never reach the live site, and
+      # failing here costs seconds instead of a full Astro build.
+      - name: Validate dataset
+        run: npm run validate
+
+      - name: Install site dependencies
+        run: npm ci
+        working-directory: site
+
+      # `npm run build` is `astro build && pagefind --site dist` — Pagefind indexes the built
+      # HTML, so it has to run after Astro, and it is chained in package.json rather than here
+      # so a local build produces exactly the same output.
+      - name: Build site
+        run: npm run build
+        working-directory: site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
