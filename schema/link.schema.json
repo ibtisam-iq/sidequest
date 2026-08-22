@@ -21,8 +21,8 @@
     },
     "category": {
       "type": "string",
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-      "description": "Category slug. Must exist in taxonomy/categories.yaml with type: links, and must match the containing folder name."
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)?$",
+      "description": "Category path: 'parent-slug' for a flat top-level category with no subcategories, or 'parent-slug/sub-slug' for one that has them. Both segments must exist in taxonomy/categories.yaml with type: links, and the path must match the containing folder path."
     },
     "tags": {
       "type": "array",
@@ -81,6 +81,10 @@
         "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
       },
       "description": "Free-form audience labels, e.g. developers, non-technical, job-seekers, everyone."
+    },
+    "legal_risk": {
+      "type": "boolean",
+      "description": "Set true when the entry may involve copyright infringement or similar legal exposure depending on the visitor's jurisdiction (e.g. shadow libraries, cracked software). Renders a visible warning badge on the card and entry page. Required true for every entry whose category path starts with shadow-libraries/ - validate.mjs enforces this, it is not optional styling."
     }
   }
 }

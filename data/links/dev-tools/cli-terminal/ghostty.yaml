@@ -1,6 +1,6 @@
 url: https://ghostty.org
 title: Ghostty
-category: dev-tools
+category: dev-tools/cli-terminal
 description: A fast, native, GPU-accelerated terminal emulator with zero-config sane defaults.
 tags:
   - terminal

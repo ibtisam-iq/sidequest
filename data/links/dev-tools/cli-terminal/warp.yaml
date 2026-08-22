@@ -1,6 +1,6 @@
 url: https://www.warp.dev
 title: Warp
-category: dev-tools
+category: dev-tools/cli-terminal
 description: A modern terminal with editor-style input, blocks, and AI command suggestions.
 tags:
   - terminal

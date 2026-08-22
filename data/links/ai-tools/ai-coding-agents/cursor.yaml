@@ -1,6 +1,6 @@
 url: https://cursor.com
 title: Cursor
-category: ai-tools
+category: ai-tools/ai-coding-agents
 description: An AI-first code editor built as a VS Code fork, with inline edits and codebase chat.
 tags:
   - ai

@@ -1,67 +1,208 @@
 # sidequest taxonomy registry
 #
-# An OPEN registry - categories grow with the directory. Nothing here is a fixed enum.
+# A two-level tree, not a flat list. Categories grow with the directory - nothing here is a
+# fixed enum.
 #
-#   slug  kebab-case identifier; must match the folder name under data/
-#   name  human-readable display name
-#   type  links | companies
+#   slug    kebab-case identifier; must match the folder name under data/
+#   name    human-readable display name
+#   type    links | companies
+#   parent  omitted for a top-level category; set to a top-level slug for a subcategory
 #
-# For `links`, the registry key is the category.
-# For `companies`, the registry key is the COUNTRY (mirroring data/companies/<country>/).
-# Industry is deliberately free-form and NOT registered here.
+# For `links`, a top-level entry (no `parent`) is a parent category; an entry with `parent` set
+# is one of its subcategories. A link's `category` field is a path: `parent-slug` for a flat
+# top-level category with no subcategories, or `parent-slug/sub-slug` for one that has them.
+# Only two levels are supported - a subcategory can never itself be a parent.
+#
+# For `companies`, the registry key is still the COUNTRY (mirroring data/companies/<country>/)
+# and stays flat - `parent` is never set for a companies entry. Industry is free-form and not
+# registered here, same as before.
 #
 # Entry counts are NOT stored. They are computed at build time by the site and by
-# `npm run validate -- --report`. Storing them would put every single-entry PR on the
-# same line of this file and guarantee merge conflicts between concurrent contributions.
+# `npm run validate -- --report`. Storing them would put every single-entry PR on the same line
+# of this file and guarantee merge conflicts between concurrent contributions.
 #
-# Adding a category: use `npm run add-link` / `npm run add-company`, which normalizes the
-# slug and fuzzy-matches it against this list to stop near-duplicates ("ai-tool" vs "ai-tools")
-# from fragmenting the taxonomy. Adding by hand is fine too - just run `npm run validate`.
+# Adding a category: use `npm run add-link` / `npm run add-company`, which normalizes the slug
+# and fuzzy-matches it against its SIBLINGS - other subcategories of the same parent, or other
+# top-level categories if you're adding a new parent - not the whole registry. That's what stops
+# "AI Chat Assistants" from fuzzy-matching against "Business & Company Research" just because
+# both happen to be subcategories of something. Adding by hand is fine too - just run
+# `npm run validate` afterward.
 
 - slug: dev-tools
   name: Dev Tools
   type: links
+- slug: cli-terminal
+  name: CLI & Terminal
+  type: links
+  parent: dev-tools
+- slug: linux-distros-vms
+  name: Linux Distros & VMs
+  type: links
+  parent: dev-tools
+- slug: networking-ip-utilities
+  name: Networking & IP Utilities
+  type: links
+  parent: dev-tools
+- slug: roadmaps-references
+  name: Roadmaps & References
+  type: links
+  parent: dev-tools
 
 - slug: ai-tools
   name: AI Tools
   type: links
+- slug: ai-chat-assistants
+  name: AI Chat Assistants
+  type: links
+  parent: ai-tools
+- slug: ai-coding-agents
+  name: AI Coding Agents
+  type: links
+  parent: ai-tools
+- slug: ai-directories-aggregators
+  name: AI Directories & Aggregators
+  type: links
+  parent: ai-tools
+- slug: ai-writing
+  name: AI Writing
+  type: links
+  parent: ai-tools
+- slug: ai-for-freelancers
+  name: AI for Freelancers
+  type: links
+  parent: ai-tools
+
+- slug: learning-courses
+  name: Learning & Courses
+  type: links
+- slug: moocs-certifications
+  name: MOOCs & Certifications
+  type: links
+  parent: learning-courses
+- slug: data-science-programming
+  name: Data Science & Programming
+  type: links
+  parent: learning-courses
+- slug: free-books-references
+  name: Free Books & References
+  type: links
+  parent: learning-courses
+
+- slug: design-inspiration
+  name: Design Inspiration
+  type: links
+
+- slug: productivity-utilities
+  name: Productivity & Utilities
+  type: links
+- slug: notes-docs
+  name: Notes & Docs
+  type: links
+  parent: productivity-utilities
+- slug: pdf-file-tools
+  name: PDF & File Tools
+  type: links
+  parent: productivity-utilities
+- slug: image-text-utilities
+  name: Image & Text Utilities
+  type: links
+  parent: productivity-utilities
+- slug: task-management
+  name: Task Management
+  type: links
+  parent: productivity-utilities
+- slug: screen-recording-meetings
+  name: Screen Recording & Meetings
+  type: links
+  parent: productivity-utilities
+- slug: url-shorteners
+  name: URL Shorteners
+  type: links
+  parent: productivity-utilities
+
+- slug: fintech-payments
+  name: Fintech & Payments
+  type: links
+- slug: pakistan-payment-apps
+  name: Pakistan Payment Apps
+  type: links
+  parent: fintech-payments
+- slug: international-remittance
+  name: International Remittance
+  type: links
+  parent: fintech-payments
+- slug: crypto-wallets-exchanges
+  name: Crypto Wallets & Exchanges
+  type: links
+  parent: fintech-payments
+
+- slug: ecommerce-seller-tools
+  name: Ecommerce Seller Tools
+  type: links
+
+- slug: business-research
+  name: Business & Company Research
+  type: links
+
+- slug: job-hunting-career
+  name: Job Hunting & Career
+  type: links
+- slug: job-boards
+  name: Job Boards
+  type: links
+  parent: job-hunting-career
+- slug: resume-application-tools
+  name: Resume & Application Tools
+  type: links
+  parent: job-hunting-career
+- slug: career-research
+  name: Career Research
+  type: links
+  parent: job-hunting-career
+
+- slug: islamic-resources
+  name: Islamic Resources
+  type: links
+- slug: quran-hadith
+  name: Quran & Hadith
+  type: links
+  parent: islamic-resources
+- slug: books-fatwa
+  name: Books & Fatwa
+  type: links
+  parent: islamic-resources
+- slug: lectures
+  name: Lectures
+  type: links
+  parent: islamic-resources
 
 - slug: github-repos
   name: GitHub Repos
-  type: links
-
-- slug: articles
-  name: Articles
-  type: links
-
-- slug: books
-  name: Books
-  type: links
-
-- slug: courses
-  name: Courses
-  type: links
-
-- slug: communities
-  name: Communities
-  type: links
-
-- slug: remote-job-boards
-  name: Remote Job Boards
-  type: links
-
-- slug: referral-links
-  name: Referral Links
   type: links
 
 - slug: newsletters
   name: Newsletters
   type: links
 
+- slug: shadow-libraries
+  name: Shadow Libraries
+  type: links
+- slug: books-academic-papers
+  name: Books & Academic Papers
+  type: links
+  parent: shadow-libraries
+- slug: movies-torrents
+  name: Movies & Torrents
+  type: links
+  parent: shadow-libraries
+- slug: cracked-software-apks
+  name: Cracked Software & APKs
+  type: links
+  parent: shadow-libraries
+
 - slug: pakistan
   name: Pakistan
   type: companies
-
 - slug: united-states
   name: United States
   type: companies

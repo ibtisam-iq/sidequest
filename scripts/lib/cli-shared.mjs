@@ -5,7 +5,13 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import { REPO_ROOT, writeYaml } from './yaml-io.mjs';
-import { categoriesFor, checkCategory, addCategory, displayNameFor } from './taxonomy.mjs';
+import {
+  topLevelFor,
+  childrenOf,
+  checkCategory,
+  addCategory,
+  displayNameFor,
+} from './taxonomy.mjs';
 import { slugify, slugifyList } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
 import { fetchFaviconForEntry } from './favicon.mjs';
@@ -78,38 +84,25 @@ export async function promptOptional(message, placeholder) {
 }
 
 /**
- * Pick an existing category/country, or register a new one.
- *
- * The fuzzy check is the whole point: it fires before anything is written, so the taxonomy
- * doesn't quietly fragment into ai-tool / ai-tools / ai_tools.
+ * Prompts for a brand-new category/subcategory/country name, fuzzy-checks it against
+ * `siblings`, and registers it. The fuzzy check is the whole point: it fires before anything is
+ * written, scoped to `siblings` (already the right scope by the time this is called - top-level
+ * categories of one type, or the subcategories of one specific parent), so the taxonomy doesn't
+ * quietly fragment into ai-tool / ai-tools / ai_tools, and a subcategory never gets compared
+ * against an unrelated parent's subcategories.
  */
-export async function pickCategory(type) {
-  const label = type === 'links' ? 'category' : 'country';
-  const existing = await categoriesFor(type);
-
-  const choice = bail(
-    await p.select({
-      message: `Which ${label}?`,
-      options: [
-        ...existing.map((c) => ({ value: c.slug, label: c.name, hint: c.slug })),
-        { value: '__new__', label: `+ Create a new ${label}` },
-      ],
-    }),
-  );
-
-  if (choice !== '__new__') return choice;
-
+async function createNewCategory({ label, type, parent, placeholder }) {
   const input = bail(
     await p.text({
       message: `New ${label} name`,
-      placeholder: type === 'links' ? 'Podcasts' : 'United States',
+      placeholder,
       validate(value) {
         if (!slugify(value ?? '')) return 'That does not normalize to a usable slug';
       },
     }),
   );
 
-  const { slug, exists, nearMatches } = await checkCategory(input, type);
+  const { slug, exists, nearMatches } = await checkCategory(input, type, parent);
 
   if (exists) {
     p.log.info(`"${slug}" already exists - using it.`);
@@ -140,17 +133,86 @@ export async function pickCategory(type) {
     }),
   );
 
-  await addCategory({ slug, name: name.trim(), type });
+  await addCategory({ slug, name: name.trim(), type, parent });
   p.log.success(`Registered new ${label} "${slug}" in taxonomy/categories.yaml`);
   return slug;
 }
 
+/**
+ * Offers the existing `siblings` plus "+ Create a new <label>", and either returns the picked
+ * slug or delegates to createNewCategory.
+ */
+async function pickOrCreate({ label, type, parent, siblings, placeholder }) {
+  const choice = bail(
+    await p.select({
+      message: `Which ${label}?`,
+      options: [
+        ...siblings.map((c) => ({ value: c.slug, label: c.name, hint: c.slug })),
+        { value: '__new__', label: `+ Create a new ${label}` },
+      ],
+    }),
+  );
+
+  if (choice !== '__new__') return choice;
+  return createNewCategory({ label, type, parent, placeholder });
+}
+
+/**
+ * Pick a country (companies stay flat, exactly as before), or a category PATH for a link -
+ * top-level first, then optionally one of its subcategories. Returns the country slug, or the
+ * full category path ("parent-slug" for a flat pick, "parent-slug/sub-slug" for a nested one).
+ */
+export async function pickCategory(type) {
+  if (type === 'companies') {
+    return pickOrCreate({
+      label: 'country',
+      type: 'companies',
+      parent: null,
+      siblings: await topLevelFor('companies'),
+      placeholder: 'United States',
+    });
+  }
+
+  const parentSlug = await pickOrCreate({
+    label: 'category',
+    type: 'links',
+    parent: null,
+    siblings: await topLevelFor('links'),
+    placeholder: 'Podcasts',
+  });
+
+  const subSiblings = await childrenOf('links', parentSlug);
+
+  const subChoice = bail(
+    await p.select({
+      message: `Subcategory under "${parentSlug}"?`,
+      initialValue: subSiblings.length ? undefined : '__none__',
+      options: [
+        { value: '__none__', label: 'None - keep it flat under this category' },
+        ...subSiblings.map((c) => ({ value: c.slug, label: c.name, hint: c.slug })),
+        { value: '__new__', label: '+ Create a new subcategory' },
+      ],
+    }),
+  );
+
+  if (subChoice === '__none__') return parentSlug;
+  if (subChoice !== '__new__') return `${parentSlug}/${subChoice}`;
+
+  const subSlug = await createNewCategory({
+    label: 'subcategory',
+    type: 'links',
+    parent: parentSlug,
+    placeholder: 'e.g. CLI & Terminal',
+  });
+  return `${parentSlug}/${subSlug}`;
+}
+
 /** Unique filename within the collection folder, derived only from the normalized slug. */
-export function resolveEntryPath(type, category, title) {
+export function resolveEntryPath(type, categoryPath, title) {
   const base = slugify(title);
   if (!base) throw new Error(`"${title}" does not normalize to a usable filename`);
 
-  const dir = path.join(REPO_ROOT, 'data', type, category);
+  const dir = path.join(REPO_ROOT, 'data', type, ...categoryPath.split('/'));
   let slug = base;
   let n = 2;
   while (existsSync(path.join(dir, `${slug}.yaml`))) slug = `${base}-${n++}`;

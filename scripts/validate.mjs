@@ -17,8 +17,11 @@ import path from 'node:path';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { PATHS, loadCollection, REPO_ROOT } from './lib/yaml-io.mjs';
-import { readTaxonomy } from './lib/taxonomy.mjs';
+import { readTaxonomy, resolveCategoryPath } from './lib/taxonomy.mjs';
 import { normalizeUrl } from './lib/url.mjs';
+
+/** category paths that require every entry under them to disclose legal_risk: true. */
+const LEGAL_RISK_REQUIRED_PARENTS = ['shadow-libraries'];
 
 const errors = [];
 const warnings = [];
@@ -104,26 +107,84 @@ function checkDuplicateUrls(links, companies) {
   return seen;
 }
 
-function checkTaxonomy(entries, kind, taxonomy) {
-  const field = kind === 'links' ? 'category' : 'country';
-  const registered = new Set(taxonomy.filter((c) => c.type === kind).map((c) => c.slug));
+/**
+ * Companies stay flat: `country` must be a registered top-level companies slug, and the file
+ * must sit directly in `data/companies/<country>/`.
+ */
+function checkCompanyTaxonomy(entries, taxonomy) {
+  const registered = new Set(
+    taxonomy.filter((c) => c.type === 'companies' && !c.parent).map((c) => c.slug),
+  );
 
   for (const entry of entries) {
-    const value = entry.data?.[field];
+    const value = entry.data?.country;
     if (typeof value !== 'string') continue; // schema already flagged it
 
     if (!registered.has(value)) {
       fail(
         entry.relPath,
-        `${field} "${value}" is not registered in taxonomy/categories.yaml with type: ${kind}. ` +
-          `Add it there (or via npm run add-${kind === 'links' ? 'link' : 'company'}) before using it.`,
+        `country "${value}" is not registered in taxonomy/categories.yaml with type: companies. ` +
+          `Add it there (or via npm run add-company) before using it.`,
       );
     }
 
-    if (entry.folder !== value) {
+    if (entry.categoryPath !== value) {
       fail(
         entry.relPath,
-        `${field} is "${value}" but the file sits in folder "${entry.folder}" - they must match`,
+        `country is "${value}" but the file sits at "data/companies/${entry.categoryPath}" - they must match`,
+      );
+    }
+  }
+}
+
+/**
+ * Links are a two-level tree: `category` must resolve to a registered top-level category, or a
+ * registered "parent/sub" path, and the file must sit at the matching folder path.
+ */
+async function checkLinkTaxonomy(entries) {
+  for (const entry of entries) {
+    const value = entry.data?.category;
+    if (typeof value !== 'string') continue; // schema already flagged it
+
+    const resolved = await resolveCategoryPath('links', value);
+    if (!resolved.valid) {
+      fail(
+        entry.relPath,
+        `category "${value}" does not resolve against taxonomy/categories.yaml: ${resolved.reason}. ` +
+          `Add it there (or via npm run add-link) before using it.`,
+      );
+      continue;
+    }
+
+    if (entry.categoryPath !== value) {
+      fail(
+        entry.relPath,
+        `category is "${value}" but the file sits at "data/links/${entry.categoryPath}" - they must match`,
+      );
+    }
+  }
+}
+
+/**
+ * Content-integrity rule, not a suggestion: every entry filed under shadow-libraries must
+ * disclose legal_risk: true, regardless of what the schema alone would allow. A missing
+ * disclosure here is a data problem, not a style nit, so it fails the build like anything else.
+ */
+function checkLegalRisk(entries) {
+  for (const entry of entries) {
+    const category = entry.data?.category;
+    if (typeof category !== 'string') continue;
+
+    const requiresDisclosure = LEGAL_RISK_REQUIRED_PARENTS.some(
+      (parent) => category === parent || category.startsWith(`${parent}/`),
+    );
+    if (!requiresDisclosure) continue;
+
+    if (entry.data?.legal_risk !== true) {
+      fail(
+        entry.relPath,
+        `category "${category}" requires legal_risk: true - every entry under ` +
+          `${LEGAL_RISK_REQUIRED_PARENTS.join(', ')} must disclose this, it is not optional.`,
       );
     }
   }
@@ -153,10 +214,16 @@ function checkAlternatives(links) {
 /** Registered categories with no entries are fine, but worth surfacing. */
 function checkEmptyCategories(taxonomy, counts) {
   for (const category of taxonomy) {
-    if (!counts.get(category.type)?.get(category.slug)) {
+    const group = counts.get(category.type);
+    const path = category.parent ? `${category.parent}/${category.slug}` : category.slug;
+    const hasChildren =
+      !category.parent && taxonomy.some((c) => c.type === category.type && c.parent === category.slug);
+
+    const n = reportCountFor(group ?? new Map(), path, hasChildren);
+    if (!n) {
       warn(
         'taxonomy/categories.yaml',
-        `category "${category.slug}" (${category.type}) has no entries yet`,
+        `category "${path}" (${category.type}) has no entries yet`,
       );
     }
   }
@@ -171,17 +238,35 @@ function countByGroup(entries, field) {
   return counts;
 }
 
+/** Direct count for an exact path, plus (for a parent) every entry filed under its children too. */
+function reportCountFor(counts, slug, isParentWithChildren) {
+  let n = counts.get(slug) ?? 0;
+  if (isParentWithChildren) {
+    for (const [key, value] of counts) {
+      if (key.startsWith(`${slug}/`)) n += value;
+    }
+  }
+  return n;
+}
+
 function printReport(taxonomy, counts) {
   console.log('\n  Entry counts (computed, never stored)\n');
+
   for (const type of ['links', 'companies']) {
     const group = counts.get(type);
     const registered = taxonomy.filter((c) => c.type === type);
+    const topLevel = registered.filter((c) => !c.parent);
     const total = [...group.values()].reduce((a, b) => a + b, 0);
 
-    console.log(`  ${type} - ${total} entries across ${registered.length} registered`);
-    for (const category of registered) {
-      const n = group.get(category.slug) ?? 0;
-      console.log(`    ${String(n).padStart(4)}  ${category.slug}`);
+    console.log(`  ${type} - ${total} entries across ${topLevel.length} top-level`);
+    for (const parent of topLevel) {
+      const children = registered.filter((c) => c.parent === parent.slug);
+      const n = reportCountFor(group, parent.slug, children.length > 0);
+      console.log(`    ${String(n).padStart(4)}  ${parent.slug}`);
+      for (const child of children) {
+        const childCount = reportCountFor(group, `${parent.slug}/${child.slug}`, false);
+        console.log(`    ${String(childCount).padStart(4)}    - ${child.slug}`);
+      }
     }
     console.log('');
   }
@@ -204,9 +289,10 @@ async function main() {
   checkSlugUniqueness(links, 'links');
   checkSlugUniqueness(companies, 'companies');
   const urlIndex = checkDuplicateUrls(links, companies);
-  checkTaxonomy(links, 'links', taxonomy);
-  checkTaxonomy(companies, 'companies', taxonomy);
+  await checkLinkTaxonomy(links);
+  checkCompanyTaxonomy(companies, taxonomy);
   checkAlternatives(links);
+  checkLegalRisk(links);
 
   const counts = new Map([
     ['links', countByGroup(links, 'category')],

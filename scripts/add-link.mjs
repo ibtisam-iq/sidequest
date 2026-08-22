@@ -46,6 +46,25 @@ const title = bail(
 const category = await pickCategory('links');
 const tags = await promptTags('Tags (comma-separated)');
 
+// Content-integrity rule, not optional styling: validate.mjs rejects any shadow-libraries entry
+// missing this, so the CLI asks up front rather than letting the write fail after the fact.
+const requiresLegalRisk =
+  category === 'shadow-libraries' || category.startsWith('shadow-libraries/');
+let legalRisk;
+if (requiresLegalRisk) {
+  legalRisk = bail(
+    await p.confirm({
+      message:
+        'This category may involve copyright infringement depending on jurisdiction. Confirm the warning badge should show?',
+      initialValue: true,
+    }),
+  );
+  if (!legalRisk) {
+    p.cancel('Every shadow-libraries entry must disclose legal_risk - nothing was written.');
+    process.exit(1);
+  }
+}
+
 const priority = bail(
   await p.select({
     message: 'Priority',
@@ -110,6 +129,7 @@ const entry = {
   priority,
   ...(audience.length && { audience }),
   ...(alternatives.length && { alternatives }),
+  ...(requiresLegalRisk && { legal_risk: true }),
   date_added: todayIso(),
   source: 'local',
   ...(addedBy && { added_by: addedBy }),

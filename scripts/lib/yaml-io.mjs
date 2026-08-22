@@ -39,20 +39,28 @@ export async function listYamlFiles(dir) {
 
 /**
  * Load every entry of one collection with the context validation needs: the parsed data, the
- * slug (bare filename), and the folder it sits in (which must agree with the entry's own
- * category/country field).
+ * slug (bare filename), and the category path it sits under (which must agree with the entry's
+ * own category/country field).
+ *
+ * `categoryPath` is every directory segment between the collection root and the file, joined
+ * with "/" - "pakistan" for a companies entry, "github-repos" for a flat links category,
+ * "ai-tools/ai-coding-agents" for a nested one. This is what makes the two-level links
+ * hierarchy and the flat companies registry validate against the exact same logic.
  */
 export async function loadCollection(kind) {
   const dir = PATHS[kind];
   const files = await listYamlFiles(dir);
 
   return Promise.all(
-    files.map(async (file) => ({
-      file,
-      relPath: path.relative(REPO_ROOT, file),
-      slug: path.basename(file, '.yaml'),
-      folder: path.basename(path.dirname(file)),
-      data: await readYaml(file),
-    })),
+    files.map(async (file) => {
+      const segments = path.relative(dir, path.dirname(file)).split(path.sep).filter(Boolean);
+      return {
+        file,
+        relPath: path.relative(REPO_ROOT, file),
+        slug: path.basename(file, '.yaml'),
+        categoryPath: segments.join('/'),
+        data: await readYaml(file),
+      };
+    }),
   );
 }

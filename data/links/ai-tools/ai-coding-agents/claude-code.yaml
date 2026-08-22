@@ -1,6 +1,6 @@
 url: https://claude.com/claude-code
 title: Claude Code
-category: ai-tools
+category: ai-tools/ai-coding-agents
 description: Anthropic's agentic coding tool that works in the terminal, IDE, and browser.
 tags:
   - ai
