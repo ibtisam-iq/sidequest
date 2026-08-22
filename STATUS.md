@@ -815,3 +815,68 @@ pages, Pagefind indexes all 218 entry pages.
 **Next:** Phase 4 - the remaining verification items from the original task (mobile mega-menu tap,
 already covered in the earlier UI phase, holds up against the larger real dataset too) and a final
 wrap-up pass.
+
+## 2026-08-23 - Phase 4/6 - the issue-form pipeline still assumed a flat taxonomy
+
+A documentation consistency pass (checking README/CONTRIBUTING against the now-hierarchical
+taxonomy) turned up a real functional gap, not just stale docs: the GitHub Issue Form -> PR
+pipeline, one of the two documented contribution paths, had never been updated for two-level
+categories.
+
+**The bug.** `scripts/lib/issue-form.mjs` ran a submitted category through `slugify()`, which
+treats `/` as just another character to strip - `AI Tools / AI Coding Agents` would have become
+the single wrong slug `ai-tools-ai-coding-agents` instead of the path `ai-tools/ai-coding-agents`.
+`scripts/parse-issue-form.mjs` compounded it: `checkCategory(group, kind)` and
+`addCategory({ slug: group, ... })` had no parent-scoping, so a submitted subcategory would have
+been fuzzy-checked against the wrong sibling set and, if new, registered with no `parent` at all.
+
+**The fix.**
+
+- Added `slugifyCategoryPath()` to `scripts/lib/slugify.mjs` - slugifies each `/`-separated segment
+  independently and rejoins, rejecting (returns `''`) anything with zero, or more than two,
+  non-empty segments. `buildLink()` now uses it in place of `slugify()`, with validation that
+  checks for a non-empty result rather than `isValidSlug()`, which only ever accepted a single
+  flat slug.
+- `parse-issue-form.mjs` now splits a links `group` into `parentSlug`/`subSlug` and calls
+  `checkCategory`/`addCategory` once per level - the parent check/registration always runs, the
+  subcategory check/registration only when one was submitted, each correctly scoped to its own
+  sibling set. The near-duplicate PR note now names which level (top-level category vs.
+  subcategory) is new. `companies` kind is untouched - it was never hierarchical and still isn't.
+- `buildLink()` also now sets `legal_risk: true` automatically whenever the submitted category
+  falls under `shadow-libraries/...`. The interactive CLI already asks for explicit confirmation
+  before writing; an issue-form submitter has no equivalent prompt, so leaving it to a checkbox
+  they might skip would risk merging a PR that `validate.mjs`'s content-integrity rule then
+  silently fails on. Deriving it from the category is a strictly narrower requirement, not a
+  workaround for the check.
+
+**Also fixed:** a real en-dash that had slipped into one bulk-imported entry's scraped description
+(`data/links/fintech-payments/crypto-wallets-exchanges/strike-buy-sell-and-send-bitcoin.yaml`) -
+missed by the earlier repo-wide em/en-dash sweep because it arrived after that sweep ran, via the
+bulk import. Caught this time by re-running the same grep sweep as a standing check before every
+commit, not a one-off.
+
+**Docs.** `.github/ISSUE_TEMPLATE/add-link.yml`'s Category field now explains the `parent`/
+`parent/sub` format and the shadow-libraries auto-badge. README's example entry and repo-layout
+section now show a real two-level path. CONTRIBUTING's Category description, the validation-rules
+table, the "slugs are the filename" note, and the whole "proposing a new category" section now
+describe the two-level tree, sibling-scoped fuzzy matching, and the `legal_risk` rule - and a stale
+reference to a `referral-links` category that no longer exists in the new tree was removed.
+
+**Verified, not assumed:**
+
+| Check | Result |
+|---|---|
+| `slugifyCategoryPath` unit tests | 6 new cases: valid path, single segment, >2 segments, trailing slash, path-traversal input, non-string input |
+| `issue-form.mjs` hierarchical-category tests | 4 new cases: path preserved through `buildLink`, `legal_risk` auto-set under shadow-libraries, `legal_risk` omitted elsewhere, 3-segment path rejected |
+| Existing malicious-title test | updated for the new behavior - `../../secrets` is now rejected outright (empty category, real validation error) rather than resolving down to `secrets` |
+| `parse-issue-form.mjs --dry-run`, existing subcategory | resolves `ai-tools/ai-coding-agents` correctly, `new_category=false`, no note |
+| `parse-issue-form.mjs --dry-run`, new subcategory of an existing parent | `new_category=true`, note correctly says "registers a new subcategory: `dev-tools/totally-new-sub`" |
+| `parse-issue-form.mjs --dry-run`, near-duplicate top-level category | fuzzy warning fires: "introduces a new top-level category `dev-tool`, but these already exist: `dev-tools`" |
+| `npm test` | 86 passing (8 new) |
+| `npm run validate` | 218/218 valid, 1 pre-existing warning (a genuinely still-empty subcategory) |
+| `astro check` | 0 errors, 0 warnings, 0 hints |
+| Repo-wide em/en-dash sweep | clean after the one data-file fix above |
+
+**Next:** the original task's final wrap-up - re-confirm the mega-menu and legal-risk verification
+items still hold against the full 218-entry dataset (already spot-checked in Phase 3), then close
+out.

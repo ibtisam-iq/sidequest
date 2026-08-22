@@ -1,4 +1,4 @@
-import { slugify, slugifyList, isValidSlug } from './slugify.mjs';
+import { slugify, slugifyList, isValidSlug, slugifyCategoryPath } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
 
 /**
@@ -90,8 +90,11 @@ function buildLink(fields, { author, today }) {
   const title = get('title');
   if (!title) errors.push('Title is required.');
 
-  const category = slugify(get('category'));
-  if (!isValidSlug(category)) errors.push('Category is required.');
+  // "parent" or "parent/sub" - each segment slugified on its own so a submitted subcategory
+  // path doesn't get flattened into one wrong slug (slugify() alone would treat "/" as just
+  // another character to strip).
+  const category = slugifyCategoryPath(get('category'));
+  if (!category) errors.push('Category is required (use "parent" or "parent/sub").');
 
   const tags = splitList(get('tags'));
   if (!tags.length) errors.push('At least one tag is required.');
@@ -100,6 +103,11 @@ function buildLink(fields, { author, today }) {
   const note = get('note');
   const audience = splitList(get('audience'));
   const alternatives = splitList(get('alternatives'));
+
+  // Content-integrity rule, not optional styling: validate.mjs rejects any shadow-libraries
+  // entry missing this, so it's set automatically from the category rather than trusting a
+  // submitter to tick an extra box correctly.
+  const legalRisk = category === 'shadow-libraries' || category.startsWith('shadow-libraries/');
 
   const entry = {
     url,
@@ -110,6 +118,7 @@ function buildLink(fields, { author, today }) {
     priority: pickEnum(get('priority'), PRIORITIES, 'medium'),
     ...(audience.length && { audience }),
     ...(alternatives.length && { alternatives }),
+    ...(legalRisk && { legal_risk: true }),
     date_added: today,
     source: 'issue-form',
     ...(author && { added_by: author }),

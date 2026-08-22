@@ -43,10 +43,10 @@ import somewhere else.
 **Links** - anything worth saving: a tool, a repo, an article, a course, a community, a job board.
 
 ```yaml
-# data/links/dev-tools/ghostty.yaml
+# data/links/dev-tools/cli-terminal/ghostty.yaml
 url: https://ghostty.org
 title: Ghostty
-category: dev-tools
+category: dev-tools/cli-terminal
 description: A fast, native, GPU-accelerated terminal emulator with zero-config sane defaults.
 tags: [terminal, cli, open-source]
 priority: high
@@ -83,8 +83,11 @@ research grows.
   so a filtered view is linkable.
 - **Alternatives, both ways.** An entry lists similar tools, and the relationship shows up on both
   entries - if A names B, B's page shows A without anyone having to write it twice.
-- **An open taxonomy.** Categories aren't a fixed enum; they're a registry that grows, with fuzzy
-  matching to stop `ai-tool` and `ai-tools` both existing.
+- **An open, two-level taxonomy.** Categories are `parent` or `parent/sub` (dev-tools,
+  ai-tools/ai-coding-agents), not a fixed enum - the registry grows, with fuzzy matching scoped to
+  siblings so `ai-tool` and `ai-tools` can't both exist under the same parent.
+- **A legal-risk disclosure.** Any entry under `shadow-libraries/...` carries a visible warning
+  badge and a `legal_risk: true` flag that validation enforces, never leaves optional.
 - **A JSON API** at [`/api/entries.json`](https://sidequest.ibtisam-iq.com/api/entries.json), and
   an [`llms.txt`](https://sidequest.ibtisam-iq.com/llms.txt) describing the data model for agents.
 
@@ -135,9 +138,9 @@ npm run preview           # serve the built output
 ## Repo layout
 
 ```
-data/links/<category>/<slug>.yaml       the entries
-data/companies/<country>/<slug>.yaml
-taxonomy/categories.yaml                the open category/country registry
+data/links/<parent>[/<sub>]/<slug>.yaml  the entries - one folder per category level, max two
+data/companies/<country>/<slug>.yaml     companies stay a flat single level
+taxonomy/categories.yaml                 the open category/country registry
 schema/*.json                           JSON Schema - the source of truth for validation
 scripts/                                validation, the CLIs, shared helpers
 site/                                   the Astro site

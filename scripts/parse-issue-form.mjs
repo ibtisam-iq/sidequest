@@ -84,25 +84,53 @@ for (const existing of [...links, ...companies]) {
 }
 
 // A near-match on the category is a note for the reviewer, never a hard failure - a human is
-// better placed than the automation to decide whether "ai-agents" is really "ai-tools".
-const { exists, nearMatches } = await checkCategory(group, kind);
+// better placed than the automation to decide whether "ai-agents" is really "ai-tools". For
+// links, `group` is "parent" or "parent/sub" - each level is checked in its own scope (a
+// subcategory is only fuzzy-matched against its siblings under the same parent).
 const label = kind === 'links' ? 'category' : 'country';
+const [parentSlug, subSlug] = kind === 'links' ? group.split('/') : [group, undefined];
 
-let notes = '';
-if (!exists) {
-  notes =
-    nearMatches.length > 0
-      ? `> [!WARNING]\n> This introduces a new ${label} \`${group}\`, but these already exist: ` +
-        `${nearMatches.map((m) => `\`${m}\``).join(', ')}.\n> ` +
+const parentCheck = await checkCategory(parentSlug, kind);
+const subCheck = subSlug ? await checkCategory(subSlug, kind, parentSlug) : null;
+const exists = parentCheck.exists && (!subCheck || subCheck.exists);
+
+const newLevelNotes = [];
+if (!parentCheck.exists) {
+  newLevelNotes.push(
+    parentCheck.nearMatches.length > 0
+      ? `> [!WARNING]\n> This introduces a new top-level ${label} \`${parentSlug}\`, but these ` +
+        `already exist: ${parentCheck.nearMatches.map((m) => `\`${m}\``).join(', ')}.\n> ` +
         `Please confirm it is genuinely distinct before merging, or retarget the entry.`
-      : `> [!NOTE]\n> This registers a new ${label}: \`${group}\`.`;
+      : `> [!NOTE]\n> This registers a new top-level ${label}: \`${parentSlug}\`.`,
+  );
 }
+if (subCheck && !subCheck.exists) {
+  newLevelNotes.push(
+    subCheck.nearMatches.length > 0
+      ? `> [!WARNING]\n> This introduces a new subcategory \`${subSlug}\` of \`${parentSlug}\`, ` +
+        `but these already exist under it: ` +
+        `${subCheck.nearMatches.map((m) => `\`${m}\``).join(', ')}.\n> ` +
+        `Please confirm it is genuinely distinct before merging, or retarget the entry.`
+      : `> [!NOTE]\n> This registers a new subcategory: \`${parentSlug}/${subSlug}\`.`,
+  );
+}
+const notes = newLevelNotes.join('\n');
 
 // Filename comes only from the normalized slug, so a crafted title cannot traverse paths.
 const relPath = path.join('data', kind, group, `${slug}.yaml`);
 
 if (!dryRun) {
-  if (!exists) await addCategory({ slug: group, name: displayNameFor(group), type: kind });
+  if (!parentCheck.exists) {
+    await addCategory({ slug: parentSlug, name: displayNameFor(parentSlug), type: kind });
+  }
+  if (subCheck && !subCheck.exists) {
+    await addCategory({
+      slug: subSlug,
+      name: displayNameFor(subSlug),
+      type: kind,
+      parent: parentSlug,
+    });
+  }
   await writeYaml(path.join(REPO_ROOT, relPath), entry);
 }
 

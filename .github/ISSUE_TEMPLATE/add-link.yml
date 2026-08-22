@@ -35,11 +35,13 @@ body:
     attributes:
       label: Category
       description: >
-        One category, e.g. `dev-tools`, `ai-tools`, `articles`, `courses`, `communities`,
-        `remote-job-boards`. See taxonomy/categories.yaml for the current list. A new category is
-        fine - it gets registered automatically, and the PR will flag it if it looks like a
-        near-duplicate of an existing one.
-      placeholder: dev-tools
+        A top-level category, or `parent/sub` for one with subcategories, e.g. `dev-tools`,
+        `ai-tools/ai-coding-agents`, `islamic-resources/lectures`. See taxonomy/categories.yaml
+        for the current tree. A new category or subcategory is fine - it gets registered
+        automatically, and the PR will flag it if it looks like a near-duplicate of an existing
+        sibling. Entries under `shadow-libraries/...` automatically get a legal-risk warning
+        badge - that category is only for shadow libraries and similar copyright-risk resources.
+      placeholder: dev-tools or ai-tools/ai-coding-agents
     validations:
       required: true
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { slugify, slugifyList, isValidSlug } from './slugify.mjs';
+import { slugify, slugifyList, isValidSlug, slugifyCategoryPath } from './slugify.mjs';
 
 test('lowercases and kebab-cases', () => {
   assert.equal(slugify('AI Tools'), 'ai-tools');
@@ -37,6 +37,26 @@ test('returns empty string for non-strings rather than throwing', () => {
 
 test('slugifyList normalizes and de-duplicates', () => {
   assert.deepEqual(slugifyList(['AI', 'ai', 'Dev Tools', '']), ['ai', 'dev-tools']);
+});
+
+test('slugifyCategoryPath slugifies each segment and keeps the separator', () => {
+  assert.equal(slugifyCategoryPath('AI Tools/AI Coding Agents'), 'ai-tools/ai-coding-agents');
+  assert.equal(slugifyCategoryPath('dev-tools'), 'dev-tools');
+});
+
+test('slugifyCategoryPath rejects more than two segments', () => {
+  assert.equal(slugifyCategoryPath('a/b/c'), '');
+});
+
+test('slugifyCategoryPath rejects a segment that normalizes to nothing', () => {
+  assert.equal(slugifyCategoryPath('dev-tools/'), '');
+  assert.equal(slugifyCategoryPath('../secrets'), '');
+  assert.equal(slugifyCategoryPath(''), '');
+});
+
+test('slugifyCategoryPath returns empty string for non-strings', () => {
+  assert.equal(slugifyCategoryPath(null), '');
+  assert.equal(slugifyCategoryPath(undefined), '');
 });
 
 test('isValidSlug accepts kebab-case and rejects everything else', () => {

@@ -98,13 +98,46 @@ test('an unknown priority falls back to medium instead of producing invalid data
 test('a malicious title cannot escape the data directory', () => {
   const body =
     '### URL\n\nhttps://evil.example\n\n### Title\n\n../../../../etc/passwd\n\n### Category\n\n../../secrets\n\n### Tags\n\nx\n';
-  const { entry, slug, group } = parseSubmission('links', body, { today: TODAY });
+  const { entry, slug, group, errors } = parseSubmission('links', body, { today: TODAY });
 
   for (const value of [slug, group, entry.category]) {
     assert.doesNotMatch(value, /[./\\]/, `"${value}" must contain no path characters`);
   }
   assert.equal(slug, 'etc-passwd');
-  assert.equal(group, 'secrets');
+  // "../../secrets" has 3 segments once split on "/", each stripped of "." by slugify - the
+  // path-segment count no longer matches after normalizing, so slugifyCategoryPath rejects the
+  // whole thing outright rather than silently resolving it down to "secrets".
+  assert.equal(group, '');
+  assert.ok(errors.some((e) => e.includes('Category')));
+});
+
+test('a subcategory path is preserved, not flattened into one slug', () => {
+  const body =
+    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\nAI Tools / AI Coding Agents\n\n### Tags\n\nt\n';
+  const { entry, group, errors } = parseSubmission('links', body, { today: TODAY });
+  assert.deepEqual(errors, []);
+  assert.equal(entry.category, 'ai-tools/ai-coding-agents');
+  assert.equal(group, 'ai-tools/ai-coding-agents');
+});
+
+test('a shadow-libraries category automatically sets legal_risk', () => {
+  const body =
+    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\nShadow Libraries / Books Academic Papers\n\n### Tags\n\nt\n';
+  const { entry, errors } = parseSubmission('links', body, { today: TODAY });
+  assert.deepEqual(errors, []);
+  assert.equal(entry.legal_risk, true);
+});
+
+test('legal_risk is omitted entirely outside shadow-libraries', () => {
+  const { entry } = parseSubmission('links', linkBody, { today: TODAY });
+  assert.ok(!('legal_risk' in entry));
+});
+
+test('a three-segment category is rejected rather than silently truncated', () => {
+  const body =
+    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\na/b/c\n\n### Tags\n\nt\n';
+  const { errors } = parseSubmission('links', body, { today: TODAY });
+  assert.ok(errors.some((e) => e.includes('Category')));
 });
 
 const companyBody = `### Company name
