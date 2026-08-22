@@ -287,3 +287,124 @@ and a live test issue, and the user asked to be consulted before the public issu
 settings change.
 
 **Next:** Phase 8 (Pages + DNS — needs the user's go-ahead) and Phase 9 (README, CONTRIBUTING).
+
+---
+
+## 2026-08-22 — Phases 8 & 9/10 (~95%) — Live deploy, docs, and the pipeline test
+
+**Pushed to main.** Rebased onto the owner's `Add CNAME for custom domain` commit, which had landed
+on the remote mid-build — preserved rather than overwritten.
+
+**The site is live at https://sidequest.ibtisam-iq.com** with all 15 entries.
+
+**Phase 8 needed no changes — verified rather than assumed.** Pages was already configured:
+`build_type: workflow` (exactly what `deploy.yml` requires), CNAME set, HTTPS certificate approved
+and enforced. DNS already resolves correctly:
+
+```
+sidequest.ibtisam-iq.com  →  CNAME  →  ibtisam-iq.github.io  →  185.199.108-111.153
+```
+
+So there is **no DNS action outstanding**. The one optional item: `protected_domain_state` is
+`unverified` — verifying the domain (Settings → Pages → Verified domains) guards against subdomain
+takeover if the repo is ever deleted.
+
+First deploy: `validate.yml` and `deploy.yml` both green. A transient 503 on `/` immediately after
+the first deploy cleared on its own within seconds — Pages warm-up, not a fault.
+
+**Phase 9.** README and CONTRIBUTING written, covering both contribution paths, every validation
+rule and *why* it exists, and the open taxonomy including the near-duplicate check.
+
+### Two real deployment blockers the live test caught
+
+Neither would have shown up in local testing, which is precisely why the end-to-end test was worth
+running.
+
+1. **The routing labels didn't exist.** The issue forms apply `new-link`/`new-company` and
+   `issue-to-pr.yml` routes on them, but GitHub does **not** create labels from a form definition.
+   Without them the pipeline silently never triggers. Created all three (`new-link`,
+   `new-company`, `automated-pr`) and documented the requirement in CLAUDE.md and CONTRIBUTING.md
+   so a forker doesn't hit the same wall.
+
+2. **Actions were not permitted to create pull requests.** The run failed at the last step with
+   *"GitHub Actions is not permitted to create or approve pull requests."* Everything before it
+   worked — the entry was generated, validated, and the branch pushed. Fixed with the user's
+   explicit approval by setting `default_workflow_permissions: write` and
+   `can_approve_pull_request_reviews: true`.
+
+**The generated entry was correct on the first try**, which is the part that mattered:
+
+```yaml
+url: https://zed.dev/          # from https://www.zed.dev/?utm_source=sidequest-pipeline-test
+tags: [editor, rust, performance]   # normalized from "Editor, Rust, Performance"
+source: issue-form
+added_by: ibtisam-iq
+date_added: '2026-08-22'
+```
+
+**Next:** confirm the PR opens on the rerun, clean up the test artifacts, final STATUS entry.
+
+---
+
+## 2026-08-22 — Phase 10/10 (100%) — Complete
+
+**The build is done and everything specced has been verified working, not assumed.**
+
+Live at **https://sidequest.ibtisam-iq.com** · 15 entries (9 links, 6 companies) · 28 pages ·
+50 unit tests · `astro check` 0/0/0.
+
+### The issue-form pipeline, verified end to end against real GitHub
+
+Two live test issues, both since closed and cleaned up (0 open PRs, 0 open issues, 0 stray
+branches).
+
+**Happy path** — issue #1 → PR #2:
+
+| Stage | Result |
+|---|---|
+| Form parsed, labels routed | ✅ |
+| URL normalized | `https://www.zed.dev/?utm_source=…` → `https://zed.dev/` |
+| Tags normalized | `Editor, Rust, Performance` → `[editor, rust, performance]` |
+| Validation before opening | ✅ passed |
+| PR opened, labelled, linked | ✅ `Closes #1`, bot commented the PR link back on the issue |
+| `validate.yml` gate on the PR | ✅ passed |
+
+**Duplicate path** — issue #3: submitted an existing URL, bot commented naming
+`data/links/dev-tools/ghostty.yaml`, closed the issue, and **opened no PR**. Correct.
+
+### Two blockers found only because the pipeline was tested live
+
+1. **Routing labels didn't exist.** GitHub doesn't create labels from an issue-form definition, so
+   the pipeline would have silently never triggered. Created and documented.
+2. **Actions couldn't create PRs.** Failed at the final step. Fixed with explicit approval:
+   `default_workflow_permissions: write`, `can_approve_pull_request_reviews: true`.
+
+Both are one-time repo setup, now documented in CLAUDE.md and CONTRIBUTING.md for anyone forking.
+
+### Known gaps and follow-ups
+
+- **Bot PRs need their checks approved once.** GitHub won't auto-run workflows on a
+  `GITHUB_TOKEN`-created PR, so `validate.yml` sits at `action_required` until a maintainer clicks
+  *Approve and run*. Not a hole — the data is validated three times regardless (before the PR is
+  opened, on push to main, and before deploy). A PAT would remove the click but tie the pipeline
+  to one person's token. Documented in CLAUDE.md.
+- **Domain not verified.** `protected_domain_state: unverified`. Optional; guards against
+  subdomain takeover if the repo is ever deleted. Settings → Pages → Verified domains.
+- **Browse pages render every card server-side.** Deliberate — it keeps card markup in one place
+  and works with JS off. Fine into the low thousands of entries; past roughly 5k, switch to
+  client-side rendering from `/api/entries.json`. The threshold is noted in `Browse.astro`.
+- **Four categories are registered but empty** (`articles`, `books`, `communities`,
+  `referral-links`). Validation warns rather than fails, which is the right behaviour — they're
+  scaffolding for entries yet to come.
+- **Favicons come from a third-party service** (DuckDuckGo). They degrade to a letter initial on
+  failure, but it is an external dependency on every card.
+- **`hiring_status` goes stale.** Nothing re-checks it. Both the issue form and CONTRIBUTING tell
+  submitters to leave it `unknown` unless confident.
+- **No pagination exercised in anger.** Page size is 24 and there are only 15 entries, so the
+  paginated route works but has never rendered a second page with real data.
+
+### If you're picking this up later
+
+Read `CLAUDE.md` first — data model, conventions, and how everything fits together. `npm run
+validate` is the gate, and it is the same script CI runs. Search only works after
+`npm run build`, never on the dev server.

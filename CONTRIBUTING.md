@@ -176,6 +176,27 @@ token, otherwise it will break in one of the two themes.
 - **Link-farm submissions**, SEO spam, or bulk-added entries with no personal note or context.
 - **Dead or paywalled-without-warning links.**
 
+## Forking this repo
+
+Two things aren't carried over by a fork and will silently break the issue-form pipeline until you
+set them up:
+
+1. **The labels.** The forms apply `new-link` / `new-company` and the workflow routes on them, but
+   GitHub doesn't create them from the form definition:
+
+   ```bash
+   gh label create new-link     --color 1D76DB --description "Issue-form submission for a new link entry"
+   gh label create new-company  --color 0E8A16 --description "Issue-form submission for a new company entry"
+   gh label create automated-pr --color 5319E7 --description "PR opened automatically from an issue form"
+   ```
+
+2. **Workflow permissions.** Settings → Actions → General → Workflow permissions needs *Read and
+   write* plus *Allow GitHub Actions to create and approve pull requests*, or `issue-to-pr.yml`
+   can't open the PR.
+
+For Pages, set Settings → Pages → Source to **GitHub Actions**, and point `site/public/CNAME` and
+`astro.config.mjs` at your own domain (or delete the CNAME to use `<user>.github.io`).
+
 ## Questions
 
 Open a [discussion](https://github.com/ibtisam-iq/sidequest/discussions). For how the codebase

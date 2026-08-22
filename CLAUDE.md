@@ -256,6 +256,35 @@ npm run preview          # serve the built site
 All three shell out to the **same** `scripts/validate.mjs` a contributor runs locally, so CI and
 local can't drift.
 
+### Required repository labels
+
+The issue forms apply `new-link` / `new-company`, and `issue-to-pr.yml` routes on exactly those
+labels — so **the labels must exist in the repo or the whole pipeline silently never triggers**.
+GitHub does not create them automatically from the form definition. If you fork this repo, run:
+
+```bash
+gh label create new-link     --color 1D76DB --description "Issue-form submission for a new link entry"
+gh label create new-company  --color 0E8A16 --description "Issue-form submission for a new company entry"
+gh label create automated-pr --color 5319E7 --description "PR opened automatically from an issue form"
+```
+
+### Bot-created PRs need the checks approved once
+
+GitHub deliberately does not auto-run workflows on PRs opened by `GITHUB_TOKEN` — it prevents a
+workflow from recursively triggering itself. So `validate.yml` on an issue-form PR sits at
+**`action_required`** until a maintainer clicks *Approve and run* (or
+`gh api --method POST repos/:owner/:repo/actions/runs/<id>/approve`).
+
+This is friction, not a hole. That data is validated three times regardless:
+
+1. `issue-to-pr.yml` runs `validate.mjs` **before** it opens the PR, so a broken entry never
+   becomes a PR at all;
+2. `validate.yml` runs on `push` to `main`, after merge;
+3. `deploy.yml` validates before building — a failure stops the deploy, so a bad entry cannot
+   reach the live site.
+
+Requiring a PAT instead would remove the click but ties the pipeline to one person's token.
+
 ### Security note for `issue-to-pr.yml`
 
 Issue bodies are untrusted input from anyone on the internet. Two rules:
