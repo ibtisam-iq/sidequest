@@ -130,7 +130,7 @@ Seed `taxonomy/categories.yaml` with 10 link categories spanning the real spread
 `dev-tools`, `ai-tools`, `github-repos`, `articles`, `books`, `courses`, `communities`,
 `remote-job-boards`, `referral-links`, `newsletters` - plus `pakistan` as the first company country.
 
-8–10 real seed entries (a mix of links and companies, at least two wired as mutual `alternatives`)
+8-10 real seed entries (a mix of links and companies, at least two wired as mutual `alternatives`)
 to prove the schemas out against actual data rather than placeholders.
 
 ### Phase 3 - Shared libs + validation

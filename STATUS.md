@@ -47,7 +47,7 @@ Read `CLAUDE.md` first for working context, then this file for current state.
   as incompatible with the static no-database design.
 
 **Next:** Phase 2 - `schema/link.schema.json`, `schema/company.schema.json`,
-`taxonomy/categories.yaml` seeded with 10 real link categories + `pakistan`, and 8–10 real seed
+`taxonomy/categories.yaml` seeded with 10 real link categories + `pakistan`, and 8-10 real seed
 entries including a mutually-linked `alternatives` pair to prove the schemas out.
 
 ---

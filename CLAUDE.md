@@ -299,6 +299,14 @@ failure** - a human reviewer decides.
 
 ---
 
+## Writing style
+
+Do not use em dashes (the "—" character) or en dashes (the "–" character) anywhere in this repo:
+prose, comments, commit messages, docs, numeric ranges (write `8-10`, not `8–10`). Use a plain
+hyphen, a comma, a colon, or split into a new sentence instead. Dash-heavy prose reads as
+AI-generated. This applies everywhere text is written for this project, not just user-facing
+copy.
+
 ## Verifying work
 
 A green build or a passing typecheck is **not** sufficient evidence that a feature works. Site
