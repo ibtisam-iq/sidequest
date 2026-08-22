@@ -578,3 +578,75 @@ This is the exact case the fix exists for - an entry whose favicon was missing f
 - verified against the real remote and the real live site, not a simulation.
 
 `npm run validate` (15/15) and `npm test` (55/55) still pass.
+
+---
+
+## 2026-08-23 - New task: two-level taxonomy + bulk import. Phase 1/6 - schema and scripts
+
+Starting a large follow-up: replace the flat category enum with a two-level tree (parent to
+subcategory), seed a real ~40-category taxonomy across 12 top-level areas, add a legal_risk
+disclosure field for the new shadow-libraries category, then bulk-import roughly 200 real
+bookmarks (a raindrop.io CSV export, a plain URL list, and named apps needing URL lookup) through
+a human-reviewed pipeline, and rebuild the links browsing UI as a mega-menu with breadcrumbs.
+
+**Phase 1 - data model and scripts, done.**
+
+- `taxonomy/categories.yaml` gains an optional `parent` field. No `parent` means top-level; a
+  `parent` (a top-level slug) makes it a subcategory. Only two levels - a subcategory never has
+  children of its own. Companies stay completely flat and untouched by any of this.
+- Seeded the full tree from the spec: 13 top-level link categories (`dev-tools`, `ai-tools`,
+  `learning-courses`, `design-inspiration`, `productivity-utilities`, `fintech-payments`,
+  `ecommerce-seller-tools`, `business-research`, `job-hunting-career`, `islamic-resources`,
+  `github-repos`, `newsletters`, `shadow-libraries`) with their subcategories per the given
+  mapping.
+- `schema/link.schema.json`'s `category` field is now a path: `parent-slug` (flat) or
+  `parent-slug/sub-slug`. Added an optional `legal_risk` boolean.
+- `scripts/lib/taxonomy.mjs`: added `topLevelFor`, `childrenOf`, `resolveCategoryPath`. The fuzzy
+  "did you mean" check is now scoped to siblings, not the whole registry - a new subcategory is
+  only compared against the other subcategories of the *same* parent. This is the exact
+  requirement from the task ("AI Chat Assistants" must never fuzzy-match "Business & Company
+  Research" just because both are subcategories of something), not an incidental side effect.
+- `scripts/lib/yaml-io.mjs`'s `loadCollection` now derives each entry's full `categoryPath` from
+  its actual folder location (every directory segment between the collection root and the file),
+  instead of just the immediate parent directory name. That is what lets the folder/category
+  agreement check work at two levels instead of one, for links, while companies keep working
+  exactly as before at one level.
+- `scripts/validate.mjs`: split the old single `checkTaxonomy` into `checkLinkTaxonomy` (resolves
+  the category path against the tree, checks the folder matches) and `checkCompanyTaxonomy`
+  (unchanged flat logic). Added `checkLegalRisk`: any entry whose category is `shadow-libraries`
+  or starts with `shadow-libraries/` must have `legal_risk: true`, or the build fails. The
+  `--report` output is now tree-aware - it prints each top-level category's aggregate count
+  (itself plus every child) and each subcategory's own count beneath it.
+- `scripts/lib/cli-shared.mjs`'s `pickCategory` is now a two-step pick for links (top-level, then
+  optionally a registered subcategory, with a "keep it flat" option) built from a shared
+  single-level `pickOrCreate`/`createNewCategory` pair; the companies country picker is
+  byte-for-byte the same single-step flow as before.
+- `add-link.mjs` prompts for legal_risk confirmation up front when the chosen category falls
+  under shadow-libraries, rather than writing the file and letting `validate.mjs` reject it
+  afterward.
+- Re-categorized the existing 9 seed link entries into the new tree with `git mv` (history
+  preserved): claude-code/cursor to ai-tools/ai-coding-agents, ghostty/warp to
+  dev-tools/cli-terminal, remoteok/we-work-remotely to job-hunting-career/job-boards,
+  the-odin-project to learning-courses/moocs-certifications, awesome-selfhosted and tldr stayed
+  on their now-flat top-level categories (github-repos, newsletters).
+
+**Verified**
+
+| Check | Result |
+|---|---|
+| Three-level category path (`a/b/c`) | rejected, both by the schema regex and by `resolveCategoryPath` |
+| Category/folder mismatch | rejected with the exact mismatched paths named |
+| Unregistered subcategory | rejected, names the parent it doesn't belong to |
+| shadow-libraries entry missing `legal_risk` | rejected |
+| Same entry with `legal_risk: true` | passes |
+| Cross-collection slug sharing | still allowed (unaffected by this change) |
+| `--report` output | correct tree structure, parent totals aggregate their children |
+
+`npm test` - **60 tests passing** (10 new/rewritten for the two-step picker), including two tests
+that exist specifically to prove the sibling-scoping requirement in both directions: a genuine
+near-match within one parent still warns (`ai-tools` children), and a slug that already exists
+elsewhere in the registry as an unrelated subcategory (`job-boards`, under `job-hunting-career`)
+does not leak into an unrelated top-level check.
+
+**Next:** Phase 2 - legal_risk warning badge on cards and entry pages, then the site routing and
+mega-menu rebuild for the hierarchical browsing UI.
