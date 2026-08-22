@@ -3,7 +3,7 @@
  * The gate. Validates the entire dataset.
  *
  * This exact script is what runs locally (`npm run validate`), in the PR gate (validate.yml),
- * and before every deploy (deploy.yml) — CI and local cannot drift because there is only one
+ * and before every deploy (deploy.yml) - CI and local cannot drift because there is only one
  * implementation.
  *
  * Modes:
@@ -66,7 +66,7 @@ function checkSlugUniqueness(entries, kind) {
     if (first) {
       fail(
         entry.relPath,
-        `duplicate ${kind} slug "${entry.slug}" — already defined in ${first}. ` +
+        `duplicate ${kind} slug "${entry.slug}" - already defined in ${first}. ` +
           `Slugs must be unique within data/${kind}/ so that alternatives can reference them unambiguously.`,
       );
       continue;
@@ -75,7 +75,7 @@ function checkSlugUniqueness(entries, kind) {
   }
 }
 
-/** Duplicate URLs are checked across the WHOLE dataset — links and companies together. */
+/** Duplicate URLs are checked across the WHOLE dataset - links and companies together. */
 function checkDuplicateUrls(links, companies) {
   const seen = new Map();
 
@@ -91,7 +91,7 @@ function checkDuplicateUrls(links, companies) {
     if (first) {
       fail(
         entry.relPath,
-        `duplicate URL — ${canonical} is already catalogued in ${first}`,
+        `duplicate URL - ${canonical} is already catalogued in ${first}`,
       );
       return;
     }
@@ -123,7 +123,7 @@ function checkTaxonomy(entries, kind, taxonomy) {
     if (entry.folder !== value) {
       fail(
         entry.relPath,
-        `${field} is "${value}" but the file sits in folder "${entry.folder}" — they must match`,
+        `${field} is "${value}" but the file sits in folder "${entry.folder}" - they must match`,
       );
     }
   }
@@ -178,7 +178,7 @@ function printReport(taxonomy, counts) {
     const registered = taxonomy.filter((c) => c.type === type);
     const total = [...group.values()].reduce((a, b) => a + b, 0);
 
-    console.log(`  ${type} — ${total} entries across ${registered.length} registered`);
+    console.log(`  ${type} - ${total} entries across ${registered.length} registered`);
     for (const category of registered) {
       const n = group.get(category.slug) ?? 0;
       console.log(`    ${String(n).padStart(4)}  ${category.slug}`);
@@ -252,7 +252,7 @@ async function main() {
   }
 
   console.log(
-    `\n  OK — ${total} entries valid (${links.length} links, ${companies.length} companies)` +
+    `\n  OK - ${total} entries valid (${links.length} links, ${companies.length} companies)` +
       `${warnings.length ? `, ${warnings.length} warning(s)` : ''}`,
   );
 

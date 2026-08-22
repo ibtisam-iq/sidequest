@@ -6,7 +6,7 @@
  * the distance function underneath it.
  *
  * Registering a genuinely-new category really does write to taxonomy/categories.yaml, so the
- * file is snapshotted and restored around the suite — a test must never leave the repo dirty.
+ * file is snapshotted and restored around the suite - a test must never leave the repo dirty.
  *
  * Run via `npm test` (the module-mocks flag is set in package.json).
  */
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const TAXONOMY = path.join(REPO_ROOT, 'taxonomy', 'categories.yaml');
-// Every slug any test registers — addCategory creates the folder as well as the registry row,
+// Every slug any test registers - addCategory creates the folder as well as the registry row,
 // and git won't flag a leaked empty directory, so they have to be listed explicitly.
 const CREATED_DIRS = ['podcasts', 'ai-tool'].map((slug) =>
   path.join(REPO_ROOT, 'data', 'links', slug),
@@ -106,7 +106,7 @@ test('no warning for a genuinely new category', async () => {
   assert.equal(result, 'podcasts');
   assert.deepEqual(scripted.warnings, [], 'a distinct category must not be flagged as a typo');
 
-  // It should really have been registered — that is the other half of the contract.
+  // It should really have been registered - that is the other half of the contract.
   assert.match(await readFile(TAXONOMY, 'utf8'), /slug: podcasts/);
 });
 

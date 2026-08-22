@@ -4,8 +4,8 @@ import { normalizeUrl } from './url.mjs';
 /**
  * Parsing for GitHub Issue Form submissions.
  *
- * GitHub renders an issue form into the issue body as markdown — `### <label>` followed by the
- * value — not as structured JSON, so it has to be parsed. Doing it here (rather than with a
+ * GitHub renders an issue form into the issue body as markdown - `### <label>` followed by the
+ * value - not as structured JSON, so it has to be parsed. Doing it here (rather than with a
  * marketplace action) keeps it in code we can unit-test and reuse the same normalization the
  * local CLIs use.
  *

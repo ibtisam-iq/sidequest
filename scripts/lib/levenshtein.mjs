@@ -1,5 +1,5 @@
 /**
- * Hand-rolled Levenshtein distance — deliberately dependency-free, because this runs in CI as
+ * Hand-rolled Levenshtein distance - deliberately dependency-free, because this runs in CI as
  * well as in the local CLIs and the scripts/ folder is kept install-light.
  *
  * Single-row DP, O(a*b) time and O(b) space.

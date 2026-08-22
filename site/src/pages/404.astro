@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { getCategoriesWithCounts } from '../lib/data';
 
-// A real page with its own metadata and noindex — deliberately not a copy of the homepage.
+// A real page with its own metadata and noindex - deliberately not a copy of the homepage.
 // Astro does genuine per-page static generation, so this needs no special machinery.
 const categories = (await getCategoriesWithCounts('links')).filter((c) => c.count > 0).slice(0, 8);
 ---

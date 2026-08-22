@@ -1,13 +1,13 @@
 # Contributing to sidequest
 
-Suggestions are genuinely welcome — a directory is only as good as what's in it. There are **two
+Suggestions are genuinely welcome - a directory is only as good as what's in it. There are **two
 ways to add an entry**, and both are first-class. Pick whichever suits you.
 
 By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
-## Path 1 — Fill in a form (no YAML, no clone)
+## Path 1 - Fill in a form (no YAML, no clone)
 
 **[→ Add an entry](https://github.com/ibtisam-iq/sidequest/issues/new/choose)**
 
@@ -17,30 +17,30 @@ What happens next is automatic:
 
 1. The URL is checked against the **whole directory**. If it's already there, you get a comment
    pointing at the existing entry and no PR is opened.
-2. Your input is normalized — tracking parameters stripped from the URL, tags lowercased and
+2. Your input is normalized - tracking parameters stripped from the URL, tags lowercased and
    de-duplicated, the category turned into a slug.
 3. The YAML file is generated and **validated** before anything is opened, so you never get a PR
    that's already broken.
 4. A pull request opens, linked to your issue, and closes it when merged.
 
 If something's wrong with the submission, the bot comments on the issue with the reasons. **Edit
-the issue** and it re-runs automatically — no need to open a new one.
+the issue** and it re-runs automatically - no need to open a new one.
 
 ### What good input looks like
 
-- **URL** — the canonical page, not a redirect or a search result. `?utm_source=…` is fine, it
+- **URL** - the canonical page, not a redirect or a search result. `?utm_source=…` is fine, it
   gets stripped.
-- **Category** — one category. Free text: check
+- **Category** - one category. Free text: check
   [`taxonomy/categories.yaml`](taxonomy/categories.yaml) for what already exists and reuse it if
   it fits. A genuinely new category is welcome (see below).
-- **Tags** — comma-separated, as many as are useful. Free-form; there's no fixed list.
-- **Priority** — how strongly *you'd* recommend it. Be honest; `medium` is a fine answer.
-- **Hiring status** (companies) — leave it `Unknown` unless you're confident. It goes stale fast
+- **Tags** - comma-separated, as many as are useful. Free-form; there's no fixed list.
+- **Priority** - how strongly *you'd* recommend it. Be honest; `medium` is a fine answer.
+- **Hiring status** (companies) - leave it `Unknown` unless you're confident. It goes stale fast
   and a wrong "actively hiring" is worse than no answer.
 
 ---
 
-## Path 2 — Edit the YAML yourself
+## Path 2 - Edit the YAML yourself
 
 Requires **Node 22.12+**.
 
@@ -75,7 +75,7 @@ Open a PR once it passes. CI runs the identical script, so a green local run mea
 
 ## The rules validation enforces
 
-`npm run validate` checks all of these. None of them are stylistic — each one prevents a real
+`npm run validate` checks all of these. None of them are stylistic - each one prevents a real
 problem:
 
 | Rule | Why |
@@ -97,7 +97,7 @@ Quoting guarantees it parses as a string across every YAML tool rather than beco
 
 ---
 
-## The open taxonomy — proposing a new category
+## The open taxonomy - proposing a new category
 
 Categories are **not a fixed enum**. They live in
 [`taxonomy/categories.yaml`](taxonomy/categories.yaml) as a registry that grows with the directory:
@@ -108,7 +108,7 @@ Categories are **not a fixed enum**. They live in
   type: links      # links | companies
 ```
 
-For **links** the registry key is the category. For **companies** it's the **country** — industry
+For **links** the registry key is the category. For **companies** it's the **country** - industry
 is deliberately free-form and not registered, because companies vary too widely for a curated list
 to be worth maintaining.
 
@@ -121,13 +121,13 @@ to be worth maintaining.
 
 ### The near-duplicate check
 
-The thing that actually kills an open taxonomy is fragmentation — `ai-tool`, `ai-tools` and
+The thing that actually kills an open taxonomy is fragmentation - `ai-tool`, `ai-tools` and
 `ai_tools` all existing because nobody checked. So new categories are fuzzy-matched (Levenshtein)
 against the existing ones:
 
-- In the **CLI**, you get a prompt: *"You typed `ai-tool`, but `ai-tools` already exists — did you
+- In the **CLI**, you get a prompt: *"You typed `ai-tool`, but `ai-tools` already exists - did you
   mean that?"* You can override it if the category really is distinct.
-- In the **issue-form flow** it's a **warning in the PR body, not a failure** — a human reviewer
+- In the **issue-form flow** it's a **warning in the PR body, not a failure** - a human reviewer
   decides. Automation shouldn't get to veto a genuinely new category.
 
 **Counts are never stored** in the registry. They're computed at build time and by
@@ -155,24 +155,24 @@ npm run build      # in site/
 npx astro check    # should report 0 errors, 0 warnings, 0 hints
 ```
 
-And please actually open it in a browser — check the change at a mobile width and in both themes.
+And please actually open it in a browser - check the change at a mobile width and in both themes.
 A green build is not evidence that a feature works.
 
 ### A note on the design
 
 Themes are driven entirely by CSS custom properties in `site/src/styles/global.css`. Light is the
-base; dark overrides only the tokens. **Don't hard-code a colour in a component** — add or reuse a
+base; dark overrides only the tokens. **Don't hard-code a colour in a component** - add or reuse a
 token, otherwise it will break in one of the two themes.
 
 ---
 
 ## What won't be merged
 
-- **Engagement features** — upvotes, bookmark counts, "verified" badges, comments, accounts. These
+- **Engagement features** - upvotes, bookmark counts, "verified" badges, comments, accounts. These
   all need a backend and user accounts, which contradicts the static flat-file design the whole
   repo rests on. This is a settled decision, not an oversight.
 - **Affiliate or referral links presented as ordinary entries.** The `referral-links` category
-  exists and is fine — just be upfront and put it there.
+  exists and is fine - just be upfront and put it there.
 - **Link-farm submissions**, SEO spam, or bulk-added entries with no personal note or context.
 - **Dead or paywalled-without-warning links.**
 

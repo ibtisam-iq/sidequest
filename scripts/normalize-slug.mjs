@@ -35,9 +35,9 @@ try {
   if (exists) {
     console.log(`  already registered under type: ${type}`);
   } else if (nearMatches.length) {
-    console.log(`  NEW — but did you mean: ${nearMatches.join(', ')}?`);
+    console.log(`  NEW - but did you mean: ${nearMatches.join(', ')}?`);
   } else {
-    console.log(`  NEW — no similar category exists under type: ${type}`);
+    console.log(`  NEW - no similar category exists under type: ${type}`);
   }
 } catch (err) {
   console.error(err.message);

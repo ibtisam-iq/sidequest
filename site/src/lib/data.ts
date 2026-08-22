@@ -9,7 +9,7 @@ export type CategoryEntry = CollectionEntry<'categories'>;
  *
  * Everything here is memoized at module scope. A static `astro build` runs in a single Node
  * process, so each collection is read and each derived structure computed exactly once no matter
- * how many pages ask for it — that is what keeps build time flat as the dataset grows into the
+ * how many pages ask for it - that is what keeps build time flat as the dataset grows into the
  * thousands, rather than every category page re-scanning the whole set.
  */
 
@@ -112,7 +112,7 @@ export async function getCategoriesWithCounts(type: 'links' | 'companies') {
 
 const NEW_WINDOW_DAYS = 14;
 
-/** True for entries added within the last two weeks — drives the "New" badge. */
+/** True for entries added within the last two weeks - drives the "New" badge. */
 export function isNew(dateAdded: string, now = new Date()): boolean {
   const added = new Date(`${dateAdded}T00:00:00Z`);
   if (Number.isNaN(added.getTime())) return false;

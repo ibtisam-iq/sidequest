@@ -17,7 +17,7 @@ import {
   writeAndValidate,
 } from './lib/cli-shared.mjs';
 
-p.intro('sidequest — add a company');
+p.intro('sidequest - add a company');
 
 const [links, companies] = await Promise.all([
   loadCollection('links'),
@@ -48,7 +48,7 @@ const name = bail(
 
 const country = await pickCategory('companies');
 
-// Industry is deliberately free-form and NOT registered in the taxonomy — companies vary too
+// Industry is deliberately free-form and NOT registered in the taxonomy - companies vary too
 // widely for a curated list to be worth maintaining.
 const industry = slugify(
   bail(

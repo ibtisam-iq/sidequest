@@ -9,7 +9,7 @@ import { companySchema } from './schemas/generated/company';
 
 /**
  * Content lives in the repo-root data/ and taxonomy/ directories, deliberately outside this
- * Astro project — the YAML files are the product, and the site is just one consumer of them.
+ * Astro project - the YAML files are the product, and the site is just one consumer of them.
  * Astro's glob loader accepts an absolute file URL as `base`, so no copying or symlinking is
  * needed. `.yaml` is a data entry type registered by Astro core, so it is parsed natively.
  */
@@ -46,7 +46,7 @@ const categories = defineCollection({
   loader: file(new URL('../../taxonomy/categories.yaml', import.meta.url).pathname, {
     // Supplying a parser means we receive the raw text and parse it ourselves. We need to,
     // because the loader requires every record to carry a unique `id` and the registry is
-    // keyed by slug *and* type — the same slug can legitimately exist for both entity types
+    // keyed by slug *and* type - the same slug can legitimately exist for both entity types
     // (a "remote" links category and a "remote" company country, say).
     parser: (text: string) => {
       const parsed = load(text);

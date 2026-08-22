@@ -21,7 +21,7 @@ const TARGETS = [
   { file: 'company.schema.json', out: 'company.ts', name: 'companySchema' },
 ];
 
-const HEADER = `// GENERATED FILE — DO NOT EDIT.
+const HEADER = `// GENERATED FILE - DO NOT EDIT.
 // Produced by scripts/gen-zod-schemas.mjs from schema/*.json, which is the single source of
 // truth for both this and scripts/validate.mjs. Edit the JSON Schema instead and re-run
 // \`npm run build\` (or \`npm run dev\`) in site/.
@@ -46,7 +46,7 @@ for (const { file, out, name } of TARGETS) {
   }
 
   // json-schema-to-zod still emits the Zod 3 string-format style. Both forms work in Zod 4 but
-  // the old ones are deprecated, so rewrite them to the current idioms — otherwise every build
+  // the old ones are deprecated, so rewrite them to the current idioms - otherwise every build
   // reports deprecation hints, and the generated code breaks outright on the next Zod major.
   body = body
     .replaceAll('z.string().url()', 'z.url()')

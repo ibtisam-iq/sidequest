@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** CLI wrapper over lib/url.mjs — prints the canonical form used for duplicate checks. */
+/** CLI wrapper over lib/url.mjs - prints the canonical form used for duplicate checks. */
 import { normalizeUrl } from './lib/url.mjs';
 
 const input = process.argv[2];

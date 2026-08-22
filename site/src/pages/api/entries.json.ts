@@ -4,7 +4,7 @@ import { getCardItems } from '../../lib/data';
 /**
  * The whole dataset as one static JSON file.
  *
- * Prerendered, so it is a plain file in dist/ and needs no server — GitHub Pages can serve it.
+ * Prerendered, so it is a plain file in dist/ and needs no server - GitHub Pages can serve it.
  * The browse pages render their cards server-side and filter the DOM, so they don't depend on
  * this; it exists as a public, stable read API for anyone (or any agent) who wants the directory
  * as data rather than HTML.

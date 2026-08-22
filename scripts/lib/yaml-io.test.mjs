@@ -5,7 +5,7 @@ import { load, dump } from 'js-yaml';
 /**
  * The date invariant the whole schema depends on.
  *
- * js-yaml 5 defaults to the YAML 1.2 CORE schema, which does not coerce timestamps — but an
+ * js-yaml 5 defaults to the YAML 1.2 CORE schema, which does not coerce timestamps - but an
  * unquoted date would still be ambiguous to other YAML tooling, and JSON Schema declares
  * date_added as `type: string`. So: dates must survive a write/read round-trip as strings.
  * If a future js-yaml upgrade changes that, this test fails loudly instead of silently turning

@@ -7,7 +7,7 @@ interface FacetGroup {
   label: string;
   options: { value: string; label: string; count: number }[];
   /**
-   * A facet with a single option is normally noise — a chip that every entry matches filters
+   * A facet with a single option is normally noise - a chip that every entry matches filters
    * nothing. The exception is a toggle-shaped facet like "actively hiring", where the one chip
    * is the whole point, so those opt in explicitly.
    */
@@ -32,7 +32,7 @@ const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
  * The tradeoff is deliberate: it means the card markup exists in exactly one place
  * (EntryCard.astro), so a filtered view can never drift from the server-rendered one, and every
  * entry stays in the HTML for crawlers with JS off. The cost is page weight that grows with the
- * dataset — fine into the low thousands (it gzips well), but if this collection ever passes
+ * dataset - fine into the low thousands (it gzips well), but if this collection ever passes
  * roughly 5k entries, switch to rendering cards on the client from /api/entries.json and keep
  * only the first batch server-rendered.
  *

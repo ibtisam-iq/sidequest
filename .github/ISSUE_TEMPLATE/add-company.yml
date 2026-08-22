@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for contributing. Submitting this form opens a pull request automatically —
+        Thanks for contributing. Submitting this form opens a pull request automatically -
         you don't need to touch any YAML.
 
         This is for the **companies directory** (organised by country, filterable by industry and
@@ -59,7 +59,7 @@ body:
     id: hiring-status
     attributes:
       label: Hiring status
-      description: Leave as Unknown unless you're confident — this goes stale quickly.
+      description: Leave as Unknown unless you're confident - this goes stale quickly.
       options:
         - Unknown
         - Actively hiring
@@ -90,7 +90,7 @@ body:
     id: rating
     attributes:
       label: Why is it notable?
-      description: What makes this company worth knowing about — engineering culture, remote setup, the work itself.
+      description: What makes this company worth knowing about - engineering culture, remote setup, the work itself.
 
   - type: input
     id: tags

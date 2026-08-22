@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for contributing. Submitting this form opens a pull request automatically —
+        Thanks for contributing. Submitting this form opens a pull request automatically -
         you don't need to touch any YAML.
 
         The URL is checked against the whole directory first, so duplicates are caught before
@@ -37,7 +37,7 @@ body:
       description: >
         One category, e.g. `dev-tools`, `ai-tools`, `articles`, `courses`, `communities`,
         `remote-job-boards`. See taxonomy/categories.yaml for the current list. A new category is
-        fine — it gets registered automatically, and the PR will flag it if it looks like a
+        fine - it gets registered automatically, and the PR will flag it if it looks like a
         near-duplicate of an existing one.
       placeholder: dev-tools
     validations:
@@ -47,7 +47,7 @@ body:
     id: tags
     attributes:
       label: Tags
-      description: Comma-separated. Free-form — no fixed list.
+      description: Comma-separated. Free-form - no fixed list.
       placeholder: terminal, cli, open-source
     validations:
       required: true

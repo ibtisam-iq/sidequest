@@ -9,7 +9,7 @@ import { getData, getCardItems, getCategoriesWithCounts } from '../../../lib/dat
 export const getStaticPaths = (async ({ paginate }) => {
   const [data, items] = await Promise.all([getData(), getCardItems()]);
 
-  // Group once, then iterate categories — O(n) overall. Filtering the full list per category
+  // Group once, then iterate categories - O(n) overall. Filtering the full list per category
   // would be O(n x categories) and is what makes builds crawl at scale.
   const byCategory = new Map<string, typeof items>();
   for (const item of items) {
@@ -36,8 +36,8 @@ const { category } = Astro.params;
 
 const categories = await getCategoriesWithCounts('links');
 
-const pageLabel = page.currentPage > 1 ? ` — page ${page.currentPage}` : '';
-const description = `${categoryName} in the sidequest directory — ${page.total} curated ${
+const pageLabel = page.currentPage > 1 ? ` - page ${page.currentPage}` : '';
+const description = `${categoryName} in the sidequest directory - ${page.total} curated ${
   page.total === 1 ? 'entry' : 'entries'
 }${pageLabel}.`;
 

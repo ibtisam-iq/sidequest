@@ -35,7 +35,7 @@ const host = new URL(website).hostname;
 const humanize = (v: string) => v.replace(/-/g, ' ');
 
 const metaDescription =
-  rating ?? `${name} — a ${humanize(industry)} company in ${countryName}, listed in the sidequest directory.`;
+  rating ?? `${name} - a ${humanize(industry)} company in ${countryName}, listed in the sidequest directory.`;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -81,7 +81,7 @@ const jsonLd = {
       {/*
         Pagefind concatenates <dt>/<dd> text without separators, which produces excerpts like
         "CountryPakistan. Industryfintech". So the fact list below is excluded from the index and
-        this sentence is indexed in its place — it keeps country/industry/policy searchable while
+        this sentence is indexed in its place - it keeps country/industry/policy searchable while
         reading as real prose in a result excerpt.
       */}
       <p class="sr-only">

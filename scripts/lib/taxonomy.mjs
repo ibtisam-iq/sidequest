@@ -8,7 +8,7 @@ import { findNearMatches } from './levenshtein.mjs';
 /**
  * The open category/country registry.
  *
- * Entry counts are deliberately NOT stored here — they are computed on demand. A stored count
+ * Entry counts are deliberately NOT stored here - they are computed on demand. A stored count
  * would put every single-entry PR on the same line of this one file, guaranteeing merge
  * conflicts between concurrent issue-form contributions.
  */
@@ -32,7 +32,7 @@ export async function slugsFor(type) {
 /**
  * Check a proposed category/country before it gets created.
  *
- * Returns { slug, exists, nearMatches } — `nearMatches` is the "did you mean 'ai-tools'? you
+ * Returns { slug, exists, nearMatches } - `nearMatches` is the "did you mean 'ai-tools'? you
  * typed 'ai-tool'" list that keeps the taxonomy from fragmenting into near-duplicates.
  * The caller decides what to do: the interactive CLIs prompt, the issue-to-PR workflow just
  * notes it in the PR body so a human reviewer can judge.

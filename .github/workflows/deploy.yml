@@ -40,7 +40,7 @@ jobs:
         run: npm ci
         working-directory: site
 
-      # `npm run build` is `astro build && pagefind --site dist` — Pagefind indexes the built
+      # `npm run build` is `astro build && pagefind --site dist` - Pagefind indexes the built
       # HTML, so it has to run after Astro, and it is chained in package.json rather than here
       # so a local build produces exactly the same output.
       - name: Build site

@@ -24,7 +24,7 @@ test('collapses punctuation runs and trims separators', () => {
   assert.equal(slugify('---Hello!!! World???---'), 'hello-world');
 });
 
-test('neutralises path traversal — this is the filename safety guarantee', () => {
+test('neutralises path traversal - this is the filename safety guarantee', () => {
   assert.equal(slugify('../../etc/passwd'), 'etc-passwd');
   assert.equal(slugify('..'), '');
   assert.equal(slugify('/'), '');

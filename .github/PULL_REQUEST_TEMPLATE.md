@@ -12,5 +12,5 @@
 
 <!--
 New to the repo? CLAUDE.md explains the data model and CONTRIBUTING.md covers both
-contribution paths. You don't need to run the site to add an entry — validation is enough.
+contribution paths. You don't need to run the site to add an entry - validation is enough.
 -->

@@ -2,7 +2,7 @@ node_modules/
 dist/
 .astro/
 
-# Generated from schema/*.json by scripts/gen-zod-schemas.mjs — never hand-edit
+# Generated from schema/*.json by scripts/gen-zod-schemas.mjs - never hand-edit
 site/src/schemas/generated/
 
 .DS_Store

@@ -2,13 +2,13 @@
 import Layout from '../layouts/Layout.astro';
 
 const description =
-  'Search the full sidequest directory — tools, repos, articles, courses, communities, job boards and companies.';
+  'Search the full sidequest directory - tools, repos, articles, courses, communities, job boards and companies.';
 ---
 
 <Layout title="Search" description={description}>
   {/*
     Both assets are emitted by the pagefind CLI into dist/pagefind/ during `npm run build`, so
-    they are loaded by URL rather than imported from npm — that keeps the UI and the search index
+    they are loaded by URL rather than imported from npm - that keeps the UI and the search index
     on exactly the same version, and the npm package ships no stylesheet anyway.
     Neither file exists under `astro dev`; the script below handles that.
   */}
@@ -96,7 +96,7 @@ const description =
 
 <script>
   // Pagefind indexes built HTML, so its bundle only exists in dist/ after `astro build`.
-  // Under `astro dev` there is no index — that is expected, not a bug.
+  // Under `astro dev` there is no index - that is expected, not a bug.
   const container = document.getElementById('search');
 
   function unavailable() {

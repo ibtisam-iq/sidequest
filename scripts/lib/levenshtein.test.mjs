@@ -23,7 +23,7 @@ test('genuinely different categories are not flagged', () => {
 });
 
 test('proportional threshold catches typos in long slugs that distance<=2 alone would miss', () => {
-  // distance 3, but only ~17% of the length — still clearly a typo
+  // distance 3, but only ~17% of the length - still clearly a typo
   assert.ok(isNearMatch('remote-job-bords', 'remote-job-boards'));
 });
 

@@ -8,7 +8,7 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Inter, Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 
-  /* Type scale — 1.2 minor third off 1rem */
+  /* Type scale - 1.2 minor third off 1rem */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -18,7 +18,7 @@
   --text-3xl: 2.25rem;
   --text-4xl: 3rem;
 
-  /* Spacing rhythm — 4px base */
+  /* Spacing rhythm - 4px base */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
@@ -50,7 +50,7 @@
   --border: #e3e3ea;
   --border-strong: #d0d0da;
 
-  /* Brand — indigo/violet, deliberately a single accent so priority and
+  /* Brand - indigo/violet, deliberately a single accent so priority and
      entity colours stay legible against it */
   --accent: #5b4bd6;
   --accent-hover: #4a3bc4;
@@ -58,7 +58,7 @@
   --accent-subtle: #eeecfd;
   --accent-border: #cfc9f7;
 
-  /* Semantic — priority */
+  /* Semantic - priority */
   --priority-high: #b4341f;
   --priority-high-bg: #fdece8;
   --priority-medium: #8a5a00;
@@ -66,7 +66,7 @@
   --priority-low: #4a6b7c;
   --priority-low-bg: #edf4f8;
 
-  /* Semantic — hiring */
+  /* Semantic - hiring */
   --hiring: #17683a;
   --hiring-bg: #e6f5ec;
 

@@ -35,8 +35,8 @@ const { country } = Astro.params;
 const countries = await getCategoriesWithCounts('companies');
 
 const hiring = page.data.filter((c) => c.hiring_status === 'actively-hiring').length;
-const pageLabel = page.currentPage > 1 ? ` — page ${page.currentPage}` : '';
-const description = `Tech companies in ${countryName} — ${page.total} listed in the sidequest directory${pageLabel}.`;
+const pageLabel = page.currentPage > 1 ? ` - page ${page.currentPage}` : '';
+const description = `Tech companies in ${countryName} - ${page.total} listed in the sidequest directory${pageLabel}.`;
 const canonical = new URL(`/companies/${country}`, Astro.site).href;
 
 const jsonLd = {

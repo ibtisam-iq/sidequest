@@ -38,7 +38,7 @@ jobs:
 
       - run: npm ci
 
-      # The exact command a contributor runs locally — CI and local cannot drift, because there
+      # The exact command a contributor runs locally - CI and local cannot drift, because there
       # is only one implementation of the rules.
       - name: Validate all entries
         run: npm run validate -- --report

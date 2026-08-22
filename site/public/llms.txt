@@ -12,10 +12,10 @@ to read, fork, and reuse.
 
 Two entity types, with separate schemas:
 
-- **Links** (`data/links/<category>/<slug>.yaml`) — any saved resource. Required fields: url,
+- **Links** (`data/links/<category>/<slug>.yaml`) - any saved resource. Required fields: url,
   title, category, tags, priority (high|medium|low), date_added, source. Optional: note,
   description, added_by, alternatives, audience.
-- **Companies** (`data/companies/<country>/<slug>.yaml`) — tech companies worth knowing about.
+- **Companies** (`data/companies/<country>/<slug>.yaml`) - tech companies worth knowing about.
   Required: name, website, country, industry, date_added, source. Optional: careers_url,
   hiring_status, size, rating, tags, remote_policy.
 
@@ -33,11 +33,11 @@ alternative, B's page also shows A.
 
 ## Key pages
 
-- https://sidequest.ibtisam-iq.com/ — overview, categories, recent and top entries
-- https://sidequest.ibtisam-iq.com/links — all links, filterable by category, priority, audience, tag
-- https://sidequest.ibtisam-iq.com/companies — company directory, filterable by country, industry,
+- https://sidequest.ibtisam-iq.com/ - overview, categories, recent and top entries
+- https://sidequest.ibtisam-iq.com/links - all links, filterable by category, priority, audience, tag
+- https://sidequest.ibtisam-iq.com/companies - company directory, filterable by country, industry,
   hiring status, remote policy and size
-- https://sidequest.ibtisam-iq.com/search — full-text search
+- https://sidequest.ibtisam-iq.com/search - full-text search
 
 ## License
 

@@ -15,5 +15,5 @@ date_added: "2026-08-18"
 source: local
 note: >-
   Only Ghostty declares this relationship. Warp's page should still show Ghostty via the
-  reverse link — that asymmetry is intentional, it is what proves the bidirectional
+  reverse link - that asymmetry is intentional, it is what proves the bidirectional
   alternatives feature actually works.

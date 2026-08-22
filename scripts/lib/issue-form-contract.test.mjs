@@ -2,7 +2,7 @@
  * Guards the contract between the GitHub Issue Forms and the parser.
  *
  * The parser keys off the human-readable field *labels*, because that is all GitHub puts in the
- * rendered issue body. So renaming a label in the form silently drops that field — no error,
+ * rendered issue body. So renaming a label in the form silently drops that field - no error,
  * just missing data in every future submission. These tests fail loudly instead, by simulating
  * the body GitHub would produce from each form and asserting the round-trip.
  */

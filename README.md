@@ -4,7 +4,7 @@
 
 **An open directory of things worth remembering.**
 
-Tools, GitHub repos, articles, books, courses, communities, remote job boards, referral links —
+Tools, GitHub repos, articles, books, courses, communities, remote job boards, referral links -
 plus a directory of notable tech companies, organised by country.
 
 [**sidequest.ibtisam-iq.com**](https://sidequest.ibtisam-iq.com) ·
@@ -22,16 +22,16 @@ plus a directory of notable tech companies, organised by country.
 
 ## What this is
 
-I kept finding good things while browsing and losing them again — a bookmark folder with 400
+I kept finding good things while browsing and losing them again - a bookmark folder with 400
 unsorted links is not a system. sidequest is that pile turned into something searchable, with
 enough structure to stay useful as it grows.
 
 It's inspired by [Awesome Lists](https://github.com/sindresorhus/awesome) and
 [free-for.dev](https://free-for.dev), but built to do the two things a markdown list can't:
 
-- **Scale** — hundreds of categories and thousands of entries, without a slow build or an
+- **Scale** - hundreds of categories and thousands of entries, without a slow build or an
   unusable page.
-- **Look like a product** — real search, filtering by category, tag, priority and audience, light
+- **Look like a product** - real search, filtering by category, tag, priority and audience, light
   and dark themes. Not a README rendered as HTML.
 
 Every entry is a **flat YAML file in git**. There is no database and no accounts. If this site
@@ -40,7 +40,7 @@ import somewhere else.
 
 ## Two kinds of entry
 
-**Links** — anything worth saving: a tool, a repo, an article, a course, a community, a job board.
+**Links** - anything worth saving: a tool, a repo, an article, a course, a community, a job board.
 
 ```yaml
 # data/links/dev-tools/ghostty.yaml
@@ -56,7 +56,7 @@ date_added: "2026-08-18"
 source: local
 ```
 
-**Companies** — a proper directory, not just a link, because companies need country, industry and
+**Companies** - a proper directory, not just a link, because companies need country, industry and
 hiring filters that a tool entry has no use for.
 
 ```yaml
@@ -78,11 +78,11 @@ research grows.
 
 ## A few things it does
 
-- **Search** across every entry, client-side via [Pagefind](https://pagefind.app) — no server.
+- **Search** across every entry, client-side via [Pagefind](https://pagefind.app) - no server.
 - **Filters** that combine: OR within a facet, AND across facets, with the state kept in the URL
   so a filtered view is linkable.
 - **Alternatives, both ways.** An entry lists similar tools, and the relationship shows up on both
-  entries — if A names B, B's page shows A without anyone having to write it twice.
+  entries - if A names B, B's page shows A without anyone having to write it twice.
 - **An open taxonomy.** Categories aren't a fixed enum; they're a registry that grows, with fuzzy
   matching to stop `ai-tool` and `ai-tools` both existing.
 - **A JSON API** at [`/api/entries.json`](https://sidequest.ibtisam-iq.com/api/entries.json), and
@@ -90,14 +90,14 @@ research grows.
 
 ## Contributing
 
-**Two paths, both first-class** — see [CONTRIBUTING.md](CONTRIBUTING.md) for the detail.
+**Two paths, both first-class** - see [CONTRIBUTING.md](CONTRIBUTING.md) for the detail.
 
 1. **[Fill in a form.](https://github.com/ibtisam-iq/sidequest/issues/new/choose)** No YAML, no
    clone, works fine from a phone. A bot checks for duplicates, generates the entry, validates it,
    and opens a PR for you.
 2. **Edit the YAML** and open a PR yourself, or run `npm run add-link` for a guided prompt.
 
-New categories are welcome — the taxonomy is meant to grow.
+New categories are welcome - the taxonomy is meant to grow.
 
 ## Running it locally
 
@@ -130,7 +130,7 @@ npm run preview           # serve the built output
 ```
 
 > Search doesn't work under `npm run dev`. Pagefind indexes the *built* HTML, so the index only
-> exists after `npm run build` — use `npm run preview` to try search locally. This is expected.
+> exists after `npm run build` - use `npm run preview` to try search locally. This is expected.
 
 ## Repo layout
 
@@ -138,13 +138,13 @@ npm run preview           # serve the built output
 data/links/<category>/<slug>.yaml       the entries
 data/companies/<country>/<slug>.yaml
 taxonomy/categories.yaml                the open category/country registry
-schema/*.json                           JSON Schema — the source of truth for validation
+schema/*.json                           JSON Schema - the source of truth for validation
 scripts/                                validation, the CLIs, shared helpers
 site/                                   the Astro site
 .github/                                issue forms and workflows
 ```
 
-[CLAUDE.md](CLAUDE.md) is the full working context — data model, conventions, and how everything
+[CLAUDE.md](CLAUDE.md) is the full working context - data model, conventions, and how everything
 fits together. [STATUS.md](STATUS.md) is the build log.
 
 ## How it's built
@@ -158,4 +158,4 @@ drift.
 
 ## License
 
-[MIT](LICENSE) — do what you like with the code and the data. Attribution appreciated.
+[MIT](LICENSE) - do what you like with the code and the data. Attribution appreciated.

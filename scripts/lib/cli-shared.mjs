@@ -12,7 +12,7 @@ import { normalizeUrl } from './url.mjs';
 /** Abort cleanly on Ctrl-C instead of writing a half-built entry. */
 export function bail(value) {
   if (p.isCancel(value)) {
-    p.cancel('Cancelled — nothing was written.');
+    p.cancel('Cancelled - nothing was written.');
     process.exit(0);
   }
   return value;
@@ -47,7 +47,7 @@ export async function promptUrl(message, existingUrls) {
 
   if (duplicate) {
     p.log.error(`Already catalogued as ${duplicate}`);
-    p.cancel('Duplicate URL — nothing was written.');
+    p.cancel('Duplicate URL - nothing was written.');
     process.exit(1);
   }
 
@@ -69,7 +69,7 @@ export async function promptTags(message, { required = true } = {}) {
   return slugifyList((raw ?? '').split(','));
 }
 
-/** Optional free text — empty input means "omit the field entirely". */
+/** Optional free text - empty input means "omit the field entirely". */
 export async function promptOptional(message, placeholder) {
   const value = bail(await p.text({ message: `${message} (optional)`, placeholder }));
   const trimmed = (value ?? '').trim();
@@ -111,7 +111,7 @@ export async function pickCategory(type) {
   const { slug, exists, nearMatches } = await checkCategory(input, type);
 
   if (exists) {
-    p.log.info(`"${slug}" already exists — using it.`);
+    p.log.info(`"${slug}" already exists - using it.`);
     return slug;
   }
 
@@ -123,7 +123,7 @@ export async function pickCategory(type) {
         message: 'Did you mean one of those?',
         options: [
           ...nearMatches.map((m) => ({ value: m, label: `Use "${m}"`, hint: 'recommended' })),
-          { value: '__keep__', label: `No — "${slug}" is genuinely different` },
+          { value: '__keep__', label: `No - "${slug}" is genuinely different` },
         ],
       }),
     );
@@ -172,13 +172,13 @@ export async function writeAndValidate(filePath, data) {
 
   if (result.status === 0) {
     s.stop('Validation passed');
-    p.outro(`Done — commit ${rel} when you're ready.`);
+    p.outro(`Done - commit ${rel} when you're ready.`);
     return;
   }
 
   s.stop('Validation failed');
   p.log.error((result.stdout + result.stderr).trim());
-  p.outro(`${rel} was written but does not validate — fix it before committing.`);
+  p.outro(`${rel} was written but does not validate - fix it before committing.`);
   process.exitCode = 1;
 }
 

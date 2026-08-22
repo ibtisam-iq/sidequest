@@ -26,7 +26,7 @@ const categoryName =
   entry.data.category;
 
 /**
- * Forward and reverse references, already unioned at build time — so an entry that never
+ * Forward and reverse references, already unioned at build time - so an entry that never
  * declared `alternatives` itself still shows the entries that pointed at it.
  */
 const alternativeSlugs = data.alternatives.get(slug) ?? [];
@@ -37,7 +37,7 @@ const alternatives = alternativeSlugs
 const declared = new Set(entry.data.alternatives ?? []);
 
 const host = new URL(url).hostname;
-const metaDescription = description ?? note ?? `${title} — a ${categoryName} entry in the sidequest directory.`;
+const metaDescription = description ?? note ?? `${title} - a ${categoryName} entry in the sidequest directory.`;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -153,7 +153,7 @@ const jsonLd = {
             <div>
               <h2>Alternatives to {title}</h2>
               <p class="muted">
-                Similar entries in the directory. Links are two-way — an entry appears here
+                Similar entries in the directory. Links are two-way - an entry appears here
                 whether it names {title} or {title} names it.
               </p>
             </div>

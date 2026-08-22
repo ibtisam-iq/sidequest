@@ -2,7 +2,7 @@
 /**
  * Turns a GitHub Issue Form submission into a data file, for .github/workflows/issue-to-pr.yml.
  *
- * Reads the untrusted issue body from the ISSUE_BODY environment variable — never from argv or
+ * Reads the untrusted issue body from the ISSUE_BODY environment variable - never from argv or
  * an interpolated shell string, which would be a script-injection hole in an issue-triggered
  * workflow.
  *
@@ -60,7 +60,7 @@ const { entry, group, slug, errors } = parseSubmission(kind, process.env.ISSUE_B
 
 if (errors.length) await fail(errors.map((e) => `- ${e}`).join('\n'));
 
-// Duplicate check across the entire dataset, links and companies together — the same rule
+// Duplicate check across the entire dataset, links and companies together - the same rule
 // validate.mjs enforces.
 const [links, companies] = await Promise.all([
   loadCollection('links'),
@@ -83,7 +83,7 @@ for (const existing of [...links, ...companies]) {
   process.exit(2);
 }
 
-// A near-match on the category is a note for the reviewer, never a hard failure — a human is
+// A near-match on the category is a note for the reviewer, never a hard failure - a human is
 // better placed than the automation to decide whether "ai-agents" is really "ai-tools".
 const { exists, nearMatches } = await checkCategory(group, kind);
 const label = kind === 'links' ? 'category' : 'country';

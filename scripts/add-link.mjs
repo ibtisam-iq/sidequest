@@ -17,7 +17,7 @@ import {
   writeAndValidate,
 } from './lib/cli-shared.mjs';
 
-p.intro('sidequest — add a link');
+p.intro('sidequest - add a link');
 
 const [links, companies] = await Promise.all([
   loadCollection('links'),
@@ -64,7 +64,7 @@ const note = await promptOptional('Note', 'Why you saved it / where you found it
 const audience = slugifyList(
   bail(
     await p.multiselect({
-      message: 'Audience (optional — space to select, enter to confirm)',
+      message: 'Audience (optional - space to select, enter to confirm)',
       required: false,
       options: [
         { value: 'developers', label: 'Developers' },
@@ -88,7 +88,7 @@ if (linkSlugs.length) {
   if (wantsAlternatives) {
     alternatives = bail(
       await p.multiselect({
-        message: 'Alternatives (shown on both entries — the reverse link is automatic)',
+        message: 'Alternatives (shown on both entries - the reverse link is automatic)',
         required: false,
         options: linkSlugs.map((slug) => ({ value: slug, label: slug })),
       }),
@@ -100,7 +100,7 @@ const addedBy = await promptOptional('Your GitHub username', 'ibtisam-iq');
 
 const { filePath } = resolveEntryPath('links', category, title);
 
-// Key order here is the order they appear in the written YAML — required first, then optional.
+// Key order here is the order they appear in the written YAML - required first, then optional.
 const entry = {
   url,
   title: title.trim(),

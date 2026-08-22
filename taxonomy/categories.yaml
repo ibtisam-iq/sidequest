@@ -1,6 +1,6 @@
 # sidequest taxonomy registry
 #
-# An OPEN registry — categories grow with the directory. Nothing here is a fixed enum.
+# An OPEN registry - categories grow with the directory. Nothing here is a fixed enum.
 #
 #   slug  kebab-case identifier; must match the folder name under data/
 #   name  human-readable display name
@@ -16,7 +16,7 @@
 #
 # Adding a category: use `npm run add-link` / `npm run add-company`, which normalizes the
 # slug and fuzzy-matches it against this list to stop near-duplicates ("ai-tool" vs "ai-tools")
-# from fragmenting the taxonomy. Adding by hand is fine too — just run `npm run validate`.
+# from fragmenting the taxonomy. Adding by hand is fine too - just run `npm run validate`.
 
 - slug: dev-tools
   name: Dev Tools

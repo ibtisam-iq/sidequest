@@ -1,5 +1,5 @@
 /**
- * Canonical URL form used for every duplicate check in the repo — the local CLIs, validate.mjs,
+ * Canonical URL form used for every duplicate check in the repo - the local CLIs, validate.mjs,
  * and the issue-to-PR workflow all compare against this, so "https://Example.com/x/?utm_source=a"
  * and "http://example.com/x" are correctly recognised as the same entry.
  */
