@@ -19,7 +19,10 @@ export async function readYaml(filePath) {
 
 export async function writeYaml(filePath, data) {
   await mkdir(path.dirname(filePath), { recursive: true });
-  const body = dump(data, { lineWidth: 100, noRefs: true, quotingType: '"' });
+  // js-yaml picks the quote style itself (v5 emits single quotes and ignores `quotingType`).
+  // That's fine: what matters is that it quotes date strings at all, so they round-trip as
+  // strings rather than being re-read as timestamps.
+  const body = dump(data, { lineWidth: 100, noRefs: true });
   await writeFile(filePath, body, 'utf8');
 }
 

@@ -100,3 +100,49 @@ trivially satisfied. Same setup for `cursor` → `claude-code` and `we-work-remo
 
 **Next:** Phase 4 — `add-link.mjs` / `add-company.mjs` interactive CLIs with `@clack/prompts`,
 wired to the same fuzzy-match check.
+
+---
+
+## 2026-08-22 — Phase 4/10 (~40%) — Interactive CLIs
+
+**Built**
+
+- `scripts/lib/cli-shared.mjs` — the pieces both CLIs need: cancel handling, URL prompt with
+  live duplicate rejection, tag/optional-text prompts, `pickCategory` (the fuzzy-guarded
+  category/country picker), collision-safe filename resolution, and write-then-validate.
+- `scripts/add-link.mjs` and `scripts/add-company.mjs`.
+
+Both check the new URL against **the whole dataset** (links *and* companies) before anything is
+written, and re-run the real `validate.mjs` afterwards so a bad entry can't be left behind
+silently.
+
+**Verified**
+
+Driving these through a real TTY turned out to be unreliable in this environment (`script`-based
+pty automation produced no captured output), so verification was done two better ways instead:
+
+1. **`scripts/lib/cli-shared.test.mjs`** — mocks the prompt layer via `mock.module` and exercises
+   the real `pickCategory` code path. Five cases: the near-duplicate warning fires and returns the
+   existing slug; the user can override it when the category is genuinely different; a distinct
+   category produces no warning *and* is really registered; picking an existing category skips the
+   new-category flow; company countries are checked against the companies registry, not links.
+   The suite snapshots `taxonomy/categories.yaml` and removes any folders it creates, so it cannot
+   leave the repo dirty.
+2. **A throwaway end-to-end harness** ran `add-link.mjs` in full with mocked prompts. It wrote a
+   real entry, the real validator accepted it, and the file was then removed.
+
+`npm test` is now **36 tests passing**. Test runner needs `--experimental-test-module-mocks`.
+
+**Fixed along the way**
+
+- `writeYaml` passed `quotingType: '"'`, which is a **silent no-op in js-yaml 5** — it emits
+  single quotes regardless. Removed the misleading option and pinned the invariant that actually
+  matters in `scripts/lib/yaml-io.test.mjs`: dates must round-trip as **strings**, never Date
+  objects. If a future js-yaml upgrade changes that, the test fails loudly.
+- The picker test initially leaked an empty `data/links/ai-tool/` directory — git doesn't report
+  empty directories, so it went unnoticed until the folder listing was checked directly. Cleanup
+  now covers every slug the tests register.
+
+**Next:** Phase 5 — the Astro site: content collections reading repo-root `data/`, landing page,
+`/links` and `/companies` browsing with pagination, entry pages, Pagefind search, and the SEO set
+(sitemap, robots.txt, 404, llms.txt, JSON-LD).
