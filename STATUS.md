@@ -408,3 +408,24 @@ Both are one-time repo setup, now documented in CLAUDE.md and CONTRIBUTING.md fo
 Read `CLAUDE.md` first — data model, conventions, and how everything fits together. `npm run
 validate` is the gate, and it is the same script CI runs. Search only works after
 `npm run build`, never on the dev server.
+
+---
+
+## 2026-08-22 — Post-verification fix
+
+**Fixed: correctly-rejected submissions were marking the workflow run red.**
+
+The duplicate-path test behaved correctly — it commented on the issue, closed it, and opened no
+PR — but the run still showed as **failed**, because a `Stop here if the submission did not parse`
+step called `exit 1` to halt the job.
+
+That's wrong. A duplicate or an incomplete submission is an **expected outcome**, not a CI
+failure. Leaving it red would train whoever maintains this to ignore the Actions tab, which is
+exactly when a real failure gets missed.
+
+The `exit 1` gate is gone. The remaining steps are now skipped by `if:` condition instead, so a
+handled rejection ends green. A genuine validation failure still fails loudly, because that one
+is a real problem worth a red run.
+
+Caught only because the duplicate path was tested against live GitHub rather than assumed from
+the local exit code.

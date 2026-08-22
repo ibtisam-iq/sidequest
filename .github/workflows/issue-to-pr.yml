@@ -93,14 +93,17 @@ jobs:
               state_reason: 'not_planned',
             });
 
-      - name: Stop here if the submission did not parse
-        if: steps.parse.outputs.ok != 'true'
-        run: exit 1
+      # A duplicate or an incomplete submission is an EXPECTED outcome, not a CI failure: the
+      # submitter has been commented at and the run is done. Failing the job here would paint
+      # the Actions tab red for correct behaviour, which trains everyone to ignore it. So the
+      # remaining steps are skipped by condition instead, and the run ends green.
+      # A genuine validation failure below still fails loudly, because that is a real problem.
 
       # The same script the PR gate and every contributor runs. Opening a PR that is already
       # known to be broken helps nobody.
       - name: Validate the new entry
         id: validate
+        if: steps.parse.outputs.ok == 'true'
         continue-on-error: true
         run: npm run validate
 
@@ -125,6 +128,7 @@ jobs:
 
       - name: Open the pull request
         id: pr
+        if: steps.parse.outputs.ok == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           # Reusing a deterministic branch per issue means editing the issue updates the existing
