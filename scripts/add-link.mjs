@@ -4,6 +4,7 @@
 import { loadCollection } from './lib/yaml-io.mjs';
 import { normalizeUrl } from './lib/url.mjs';
 import { slugifyList } from './lib/slugify.mjs';
+import { LEGAL_RISK_REQUIRED_CATEGORIES } from './lib/taxonomy.mjs';
 import {
   p,
   bail,
@@ -46,10 +47,10 @@ const title = bail(
 const category = await pickCategory('links');
 const tags = await promptTags('Tags (comma-separated)');
 
-// Content-integrity rule, not optional styling: validate.mjs rejects any shadow-libraries entry
-// missing this, so the CLI asks up front rather than letting the write fail after the fact.
-const requiresLegalRisk =
-  category === 'shadow-libraries' || category.startsWith('shadow-libraries/');
+// Content-integrity rule, not optional styling: validate.mjs rejects any entry filed under one
+// of these categories that's missing this, so the CLI asks up front rather than letting the
+// write fail after the fact.
+const requiresLegalRisk = LEGAL_RISK_REQUIRED_CATEGORIES.includes(category);
 let legalRisk;
 if (requiresLegalRisk) {
   legalRisk = bail(
@@ -60,7 +61,7 @@ if (requiresLegalRisk) {
     }),
   );
   if (!legalRisk) {
-    p.cancel('Every shadow-libraries entry must disclose legal_risk - nothing was written.');
+    p.cancel('This category requires disclosing legal_risk - nothing was written.');
     process.exit(1);
   }
 }

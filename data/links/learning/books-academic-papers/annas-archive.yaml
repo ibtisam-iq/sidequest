@@ -1,0 +1,15 @@
+url: https://annas-archive.org
+title: Anna's Archive
+category: learning/books-academic-papers
+description: A search engine aggregating shadow library collections of books and academic papers.
+tags:
+  - shadow-library
+  - books
+  - academic-papers
+priority: medium
+audience:
+  - everyone
+legal_risk: true
+date_added: "2026-08-23"
+source: local
+note: Included for reference only, not an endorsement - see the legal risk disclosure on the entry page.

@@ -1,0 +1,13 @@
+url: https://getalby.com/
+title: Alby - Your Bitcoin & Nostr companion for the web
+category: finance/crypto-wallets-exchanges
+description: >-
+  Our open-source products are building blocks to make bitcoin native currency of the internet. Alby
+  Hub is a self-custodial lightning wallet, Alby Browser Extension is a Nostr signer and makes use
+  of bitcoin on the web.
+tags:
+  - bitcoin
+  - lightning
+priority: medium
+date_added: '2025-07-02'
+source: local

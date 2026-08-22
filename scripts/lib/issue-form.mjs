@@ -1,5 +1,6 @@
 import { slugify, slugifyList, isValidSlug, slugifyCategoryPath } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
+import { LEGAL_RISK_REQUIRED_CATEGORIES } from './taxonomy.mjs';
 
 /**
  * Parsing for GitHub Issue Form submissions.
@@ -104,10 +105,10 @@ function buildLink(fields, { author, today }) {
   const audience = splitList(get('audience'));
   const alternatives = splitList(get('alternatives'));
 
-  // Content-integrity rule, not optional styling: validate.mjs rejects any shadow-libraries
-  // entry missing this, so it's set automatically from the category rather than trusting a
-  // submitter to tick an extra box correctly.
-  const legalRisk = category === 'shadow-libraries' || category.startsWith('shadow-libraries/');
+  // Content-integrity rule, not optional styling: validate.mjs rejects any entry filed under
+  // one of these categories that's missing this, so it's set automatically from the category
+  // rather than trusting a submitter to tick an extra box correctly.
+  const legalRisk = LEGAL_RISK_REQUIRED_CATEGORIES.includes(category);
 
   const entry = {
     url,

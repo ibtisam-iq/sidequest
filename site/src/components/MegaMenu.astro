@@ -5,84 +5,103 @@ interface Props {
   tree: CategoryNode[];
   currentParent: string | null;
   currentSub: string | null;
+  /** True when the current page is the companies feature, nested under Career. */
+  onCompanies?: boolean;
+  companiesCount: number;
 }
 
-const { tree, currentParent, currentSub } = Astro.props;
+const { tree, currentParent, currentSub, onCompanies = false, companiesCount } = Astro.props;
 
-// Categories with no entries yet still show in the menu (so the tree stays discoverable as it
-// fills in) but sort to the bottom rather than crowding out populated ones.
-const sorted = [...tree].sort((a, b) => {
-  if (a.count === 0 && b.count > 0) return 1;
-  if (b.count === 0 && a.count > 0) return -1;
-  return 0;
-});
+// The six roots are fixed and always shown alphabetically - no ranking by count, ever. This is
+// the primary site nav now, not a secondary in-page widget, so its order has to be as stable and
+// predictable as the roots themselves.
+const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
 ---
 
-<nav class="mega" aria-label="Link categories" data-pagefind-ignore data-mega-menu>
+<nav class="mega" aria-label="Primary" data-pagefind-ignore data-mega-menu>
   <ul class="mega-bar">
     <li>
-      <a href="/links" class="mega-trigger" aria-current={!currentParent ? 'page' : undefined}>
+      <a href="/links" class="mega-trigger mega-all" aria-current={!currentParent ? 'page' : undefined}>
         All links
       </a>
     </li>
     {
-      sorted.map((parent) => (
-        <li class="mega-item" class:list={{ 'has-children': parent.children.length > 0 }}>
-          <span class="mega-trigger-wrap">
-            <a
-              href={`/links/${parent.slug}`}
-              class="mega-trigger"
-              aria-current={currentParent === parent.slug && !currentSub ? 'page' : undefined}
-            >
-              {parent.name}
-              <span class="count">{parent.count}</span>
-            </a>
-            {parent.children.length > 0 && (
-              <button
-                type="button"
-                class="mega-toggle"
-                aria-expanded="false"
-                aria-label={`Show ${parent.name} subcategories`}
+      sorted.map((parent) => {
+        const isCareer = parent.slug === 'career';
+        const hasPanel = parent.children.length > 0 || isCareer;
+        return (
+          <li class="mega-item" class:list={{ 'has-children': hasPanel }}>
+            <span class="mega-trigger-wrap">
+              <a
+                href={`/links/${parent.slug}`}
+                class="mega-trigger"
+                aria-current={
+                  currentParent === parent.slug && !currentSub && !onCompanies ? 'page' : undefined
+                }
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </button>
-            )}
-          </span>
+                {parent.name}
+                <span class="count">{parent.count}</span>
+              </a>
+              {hasPanel && (
+                <button
+                  type="button"
+                  class="mega-toggle"
+                  aria-expanded="false"
+                  aria-label={`Show ${parent.name} subcategories`}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </span>
 
-          {parent.children.length > 0 && (
-            <div class="mega-panel">
-              <ul>
-                {parent.children.map((child) => (
-                  <li>
-                    <a
-                      href={`/links/${parent.slug}/${child.slug}`}
-                      aria-current={
-                        currentParent === parent.slug && currentSub === child.slug
-                          ? 'page'
-                          : undefined
-                      }
-                    >
-                      {child.name}
-                      <span class="count">{child.count}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))
+            {hasPanel && (
+              <div class="mega-panel">
+                <ul>
+                  {isCareer && (
+                    <li>
+                      <a
+                        href="/career/companies"
+                        class="mega-companies"
+                        aria-current={onCompanies ? 'page' : undefined}
+                      >
+                        Companies
+                        <span class="count">{companiesCount}</span>
+                      </a>
+                    </li>
+                  )}
+                  {parent.children.map((child) => (
+                    <li>
+                      <a
+                        href={`/links/${parent.slug}/${child.slug}`}
+                        aria-current={
+                          currentParent === parent.slug && currentSub === child.slug
+                            ? 'page'
+                            : undefined
+                        }
+                      >
+                        {child.name}
+                        <span class="count">{child.count}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </li>
+        );
+      })
     }
   </ul>
 </nav>
 
 <style>
   .mega {
-    position: sticky;
-    top: 60px;
-    z-index: 40;
+    /* Nested inside the already-sticky <header> now (the primary site nav, not a per-page
+       widget scoped to /links), so the header's own sticky positioning carries this along -
+       giving it a second sticky context here would be redundant and fragile against header
+       height changes. */
     background: var(--bg-elevated);
     border-bottom: 1px solid var(--border);
   }
@@ -135,6 +154,17 @@ const sorted = [...tree].sort((a, b) => {
     color: var(--accent);
     border-bottom-color: var(--accent);
     font-weight: 650;
+  }
+
+  /* "All links" sits apart from the six roots - a quieter, always-available escape hatch to the
+     full dataset, not another category of equal weight. */
+  .mega-all {
+    color: var(--fg-subtle);
+    font-weight: 500;
+  }
+
+  .mega-all:hover {
+    color: var(--fg);
   }
 
   .mega-trigger .count {
@@ -224,6 +254,27 @@ const sorted = [...tree].sort((a, b) => {
   .mega-panel a:hover {
     background: var(--bg-subtle);
     color: var(--fg);
+  }
+
+  /* Companies isn't a real subcategory - it's a whole other collection surfaced here as a
+     feature of Career - so it gets its own visual weight and a divider before the real
+     subcategories start. */
+  .mega-companies {
+    color: var(--company);
+    font-weight: 620;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    margin-bottom: var(--sp-1);
+    padding-bottom: var(--sp-3);
+  }
+
+  .mega-companies:hover {
+    color: var(--company);
+    background: var(--company-bg);
+  }
+
+  .mega-companies[aria-current='page'] {
+    background: var(--company-bg);
   }
 
   .mega-panel a[aria-current='page'] {

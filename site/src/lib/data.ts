@@ -163,7 +163,10 @@ export async function getLinkCategoryTree(): Promise<CategoryNode[]> {
         children: children.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
       };
     })
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    // The six roots are fixed, durable life-domain categories, not a ranked list - they always
+    // show alphabetically, never reordered by count. (Subcategories within a root still rank by
+    // count above - that tier is genuinely open-ended, so surfacing the fullest ones first helps.)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Companies stay flat - unchanged shape, just filtered to top-level (always true for them). */
@@ -256,7 +259,7 @@ export async function getCardItems(): Promise<CardItem[]> {
     type: 'company',
     slug: c.id,
     title: c.data.name,
-    href: `/companies/${c.data.country}/entry/${c.id}`,
+    href: `/career/companies/${c.data.country}/entry/${c.id}`,
     url: c.data.website,
     description: c.data.rating,
     group: c.data.country,

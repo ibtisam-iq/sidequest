@@ -113,22 +113,22 @@ test('a malicious title cannot escape the data directory', () => {
 
 test('a subcategory path is preserved, not flattened into one slug', () => {
   const body =
-    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\nAI Tools / AI Coding Agents\n\n### Tags\n\nt\n';
+    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\nTechnology / AI Coding Agents\n\n### Tags\n\nt\n';
   const { entry, group, errors } = parseSubmission('links', body, { today: TODAY });
   assert.deepEqual(errors, []);
-  assert.equal(entry.category, 'ai-tools/ai-coding-agents');
-  assert.equal(group, 'ai-tools/ai-coding-agents');
+  assert.equal(entry.category, 'technology/ai-coding-agents');
+  assert.equal(group, 'technology/ai-coding-agents');
 });
 
-test('a shadow-libraries category automatically sets legal_risk', () => {
+test('a shadow-library-style category automatically sets legal_risk', () => {
   const body =
-    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\nShadow Libraries / Books Academic Papers\n\n### Tags\n\nt\n';
+    '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\nLearning / Books Academic Papers\n\n### Tags\n\nt\n';
   const { entry, errors } = parseSubmission('links', body, { today: TODAY });
   assert.deepEqual(errors, []);
   assert.equal(entry.legal_risk, true);
 });
 
-test('legal_risk is omitted entirely outside shadow-libraries', () => {
+test('legal_risk is omitted entirely outside the categories that require it', () => {
   const { entry } = parseSubmission('links', linkBody, { today: TODAY });
   assert.ok(!('legal_risk' in entry));
 });

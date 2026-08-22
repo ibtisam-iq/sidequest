@@ -17,11 +17,12 @@ import path from 'node:path';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { PATHS, loadCollection, REPO_ROOT } from './lib/yaml-io.mjs';
-import { readTaxonomy, resolveCategoryPath } from './lib/taxonomy.mjs';
+import {
+  readTaxonomy,
+  resolveCategoryPath,
+  LEGAL_RISK_REQUIRED_CATEGORIES,
+} from './lib/taxonomy.mjs';
 import { normalizeUrl } from './lib/url.mjs';
-
-/** category paths that require every entry under them to disclose legal_risk: true. */
-const LEGAL_RISK_REQUIRED_PARENTS = ['shadow-libraries'];
 
 const errors = [];
 const warnings = [];
@@ -166,25 +167,32 @@ async function checkLinkTaxonomy(entries) {
 }
 
 /**
- * Content-integrity rule, not a suggestion: every entry filed under shadow-libraries must
- * disclose legal_risk: true, regardless of what the schema alone would allow. A missing
- * disclosure here is a data problem, not a style nit, so it fails the build like anything else.
+ * Content-integrity rule, not a suggestion: every entry filed under one of the shadow-library
+ * leaf categories must disclose legal_risk: true, regardless of what the schema alone would
+ * allow - and nothing outside those categories may set it, so the badge stays meaningful rather
+ * than becoming generic "be careful" noise. A mismatch here is a data problem, not a style nit,
+ * so it fails the build like anything else.
  */
 function checkLegalRisk(entries) {
   for (const entry of entries) {
     const category = entry.data?.category;
     if (typeof category !== 'string') continue;
 
-    const requiresDisclosure = LEGAL_RISK_REQUIRED_PARENTS.some(
-      (parent) => category === parent || category.startsWith(`${parent}/`),
-    );
-    if (!requiresDisclosure) continue;
+    const requiresDisclosure = LEGAL_RISK_REQUIRED_CATEGORIES.includes(category);
 
-    if (entry.data?.legal_risk !== true) {
+    if (requiresDisclosure && entry.data?.legal_risk !== true) {
       fail(
         entry.relPath,
         `category "${category}" requires legal_risk: true - every entry under ` +
-          `${LEGAL_RISK_REQUIRED_PARENTS.join(', ')} must disclose this, it is not optional.`,
+          `${LEGAL_RISK_REQUIRED_CATEGORIES.join(', ')} must disclose this, it is not optional.`,
+      );
+    }
+
+    if (!requiresDisclosure && entry.data?.legal_risk === true) {
+      fail(
+        entry.relPath,
+        `legal_risk: true is only valid under ${LEGAL_RISK_REQUIRED_CATEGORIES.join(', ')} - ` +
+          `"${category}" is not one of them.`,
       );
     }
   }

@@ -9,16 +9,30 @@ appended after every meaningful chunk of work. Read it second to learn the curre
 
 ---
 
+## The founding principle
+
+sidequest is **not** a comprehensive directory of the best or most important tools in any
+category. It is a personal log of things worth rescuing from being forgotten - specifically
+things found incidentally while doing something else, that are useful but **not already famous
+or well-known**.
+
+Concretely: never add LinkedIn, YouTube, Google, or anything a typical person in the relevant
+field would already know about. The value of this site is capturing the obscure and easily
+forgotten, not being exhaustive. This is the actual reason the site is named "sidequest," and it
+governs every categorization and inclusion decision below - including your own judgment calls
+during a bulk import or when reviewing a submission.
+
 ## What this project is
 
 **sidequest** is an open-source, git-backed personal directory for saving anything interesting
-found while browsing: tools (dev, AI, PDF, CV, browsers, day-to-day - anything), GitHub repos,
-articles, books, courses, communities, remote job boards, referral links - plus a dedicated
-**companies** directory (tech companies worth knowing about, organized by country, starting with
-Pakistan and expanding to US/Canada/remote).
+found while browsing: tools, GitHub repos, articles, books, courses, communities, remote job
+boards, referral links - plus a **companies** feature (tech companies worth knowing about,
+organized by country, starting with Pakistan and expanding to US/Canada/remote), nested under the
+Career section of the site rather than sitting as its own top-level entity type in the nav.
 
-Inspiration is Awesome Lists and free-for.dev. The reason it exists as a real project rather than
-a markdown list is the two things a markdown list cannot do:
+Inspiration is Awesome Lists and free-for.dev, but the comparison stops at mechanics - those
+projects aim for comprehensiveness within a niche; sidequest deliberately does not, per the
+founding principle above. What sidequest borrows is the two things a markdown list can't do:
 
 1. **Scale** - hundreds of categories and thousands of entries, without a slow build or an
    unusable UI.
@@ -54,8 +68,8 @@ README.md  CONTRIBUTING.md  CODE_OF_CONDUCT.md  LICENSE
 package.json       root: deps for scripts/ only (ajv, js-yaml, @clack/prompts, ...)
 
 data/
-  links/<category-slug>/<entry-slug>.yaml
-  companies/<country-slug>/<company-slug>.yaml
+  links/<root-slug>[/<sub-slug>]/<entry-slug>.yaml   root is one of the six life-domain roots
+  companies/<country-slug>/<company-slug>.yaml       surfaced in the site at /career/companies
 
 taxonomy/
   categories.yaml  the open category/country registry
@@ -100,9 +114,13 @@ site/                  the Astro project (its own package.json)
 ## The two entity types
 
 They are deliberately separate because they need different filtering. A company needs
-country/industry/hiring-status facets that a generic tool entry has no use for.
+country/industry/hiring-status facets that a generic tool entry has no use for. This is a data
+and validation distinction only - **in the site's navigation, companies are not a top-level thing
+next to "Links"**; they're a feature at `/career/companies`, since a company is itself a kind of
+career-relevant resource. Nothing about the schema, folder layout, or validation below changed
+because of that - only where the site links to it from.
 
-### 1. Links - `data/links/<category-slug>/<entry-slug>.yaml`
+### 1. Links - `data/links/<root-slug>[/<sub-slug>]/<entry-slug>.yaml`
 
 Generic entries: tools, repos, articles, books, courses, communities, job boards, referral links.
 
@@ -110,7 +128,7 @@ Generic entries: tools, repos, articles, books, courses, communities, job boards
 |---|---|---|
 | `url` | ✔ | canonical URL |
 | `title` | ✔ | |
-| `category` | ✔ | must exist in `taxonomy/categories.yaml` with `type: links` |
+| `category` | ✔ | a path into `taxonomy/categories.yaml` - `root` or `root/sub`, `type: links` |
 | `tags` | ✔ | array, min 1, free-form, normalized lowercase-kebab |
 | `priority` | ✔ | `high` \| `medium` \| `low` |
 | `date_added` | ✔ | **quoted** ISO date, e.g. `"2026-08-22"` |
@@ -120,6 +138,7 @@ Generic entries: tools, repos, articles, books, courses, communities, job boards
 | `added_by` | | GitHub username |
 | `alternatives` | | array of **link** entry-slugs; powers the two-way alternatives feature |
 | `audience` | | free-form array: `developers`, `non-technical`, `job-seekers`, `everyone`, ... |
+| `legal_risk` | | boolean; required `true` under three specific categories - see below |
 
 ### 2. Companies - `data/companies/<country-slug>/<company-slug>.yaml`
 
@@ -146,38 +165,94 @@ Generic entries: tools, repos, articles, books, courses, communities, job boards
 
 ---
 
+## The six root categories
+
+Links are organized under **six fixed, durable life-domain roots** - not implementation
+categories, not trend words:
+
+**Career · Faith · Finance · Learning · Lifestyle · Technology**
+
+Always shown in that alphabetical order in the nav - no manual reordering by perceived
+importance, ever. There is deliberately **no "AI" root**: AI-related entries live under
+Technology as subcategories (`technology/ai-coding-agents`, `technology/ai-chat-assistants`,
+etc.), because "AI" is a trend word, not a life domain. These six roots replaced a flat,
+implementation-shaped 13-category taxonomy (`dev-tools`, `ai-tools`, `fintech-payments`, ...) in
+a full restructuring - old category folders no longer exist anywhere in `data/links/`.
+
+### Classification precedence
+
+When an entry could plausibly fit more than one root - which is common, since real bookmarks
+rarely respect clean domain boundaries - apply this **exact ordered rule, first match wins**.
+This applies to existing seed data, bulk imports, and future submissions alike, so categorization
+stays consistent instead of being re-judged ad hoc every time:
+
+1. **Explicitly religious content** → Faith, regardless of format (app, reference site, lecture).
+2. **Entire purpose is structured teaching** - a course/curriculum/MOOC platform, regardless of
+   subject taught → Learning.
+3. **About jobs, hiring, running a business, freelancing, or professional advancement** → Career.
+   (This is why ecommerce-seller-tools and business-research file under Career, not Technology -
+   they're about *running* a business, which this rule catches before rule 5 would.)
+4. **About moving, storing, or growing money** - payments, banking, crypto, invoicing → Finance.
+5. **A tool, software, or technical reference used to build or operate something** → Technology.
+6. **Everything else** - general productivity, entertainment, day-to-day utilities → Lifestyle.
+
+**Shadow-library-style content** (Sci-Hub, Z-Library, LibGen, Anna's Archive, torrent/cracked-
+software sites) is a deliberate, risk-understood inclusion, not an oversight - but it is filed by
+**content type** under whichever root actually fits, not under its own root:
+`learning/books-academic-papers` (books/papers), `lifestyle/movies-torrents` (movies/torrents),
+`technology/cracked-software-apks` (cracked software). Every entry under exactly these three
+categories requires `legal_risk: true`, enforced by `validate.mjs` in both directions - missing
+where required, and rejected anywhere else - and rendered as a visible warning badge on the card
+and entry page. See `scripts/lib/taxonomy.mjs`'s `LEGAL_RISK_REQUIRED_CATEGORIES` for the
+authoritative list; `scripts/add-link.mjs` and `scripts/lib/issue-form.mjs` both import it from
+there so the three can't drift.
+
 ## The open taxonomy system
 
-Categories are **not a fixed enum**. They grow as the directory grows, without anyone hand-editing
-a schema.
+Subcategories within each root are **not a fixed enum**. They grow as the directory grows,
+without anyone hand-editing a schema - but the six roots themselves are fixed (see above); this
+openness applies to what's underneath them.
 
 `taxonomy/categories.yaml` is the registry. Each record:
 
 ```yaml
-- slug: ai-tools
-  name: AI Tools
+- slug: technology
+  name: Technology
   type: links      # links | companies
+- slug: ai-coding-agents
+  name: AI Coding Agents
+  type: links
+  parent: technology
 ```
 
-For **links**, the registry key is the category. For **companies**, the registry key is the
-**country** (mirroring `data/companies/<country>/`); `industry` stays free-form and unregistered.
+For **links**, the registry key is the category path. For **companies**, the registry key is the
+**country** (mirroring `data/companies/<country>/`); `industry` stays free-form and unregistered,
+and the companies side of the registry is completely unaffected by the six-root restructuring.
 
-When `add-link.mjs` / `add-company.mjs` is given a category that doesn't exist yet it:
+When `add-link.mjs` / `add-company.mjs` is given a subcategory that doesn't exist yet it:
 
 1. normalizes it (lowercase, kebab-case);
-2. **fuzzy-matches it against existing categories** (Levenshtein; warns at distance ≤2 or
-   normalized ratio <0.3) so the taxonomy doesn't fragment into near-duplicates - *"did you mean
-   'ai-tools'? you typed 'ai-tool'"*;
+2. **fuzzy-matches it against its siblings only** (Levenshtein; warns at distance ≤2 or
+   normalized ratio <0.3) - other subcategories of the same root, or other top-level roots if
+   you're somehow proposing a new one - so the taxonomy doesn't fragment into near-duplicates
+   *within a root* - *"did you mean 'ai-chat-assistants'? you typed 'ai-chat-assistant'"*;
 3. if confirmed genuinely new, adds it to the registry and creates the data folder.
+
+A subcategory named after an old flat top-level category (e.g. `technology/dev-tools`,
+`technology/ai-tools`, `finance/fintech-payments`) is a **generic catch-all bucket** for entries
+that don't fit a more specific sibling subcategory - it is not a sign the hierarchy is deeper than
+two levels. Depth stays capped at root → subcategory; a third level is only added later if a
+specific subcategory genuinely outgrows it.
 
 **Tags are fully free-form** - no registry, just normalized to lowercase-kebab. Tags are meant to
 be broader and more numerous than categories.
 
 ### Entry counts are computed, never stored
 
-The registry holds only `slug`/`name`/`type`. Counts are computed at build time by the site and by
-`npm run validate -- --report`. This is deliberate: a stored count would put every single-entry PR
-on the same line of one shared file, guaranteeing merge conflicts between concurrent issue-form PRs.
+The registry holds only `slug`/`name`/`type`/`parent`. Counts are computed at build time by the
+site and by `npm run validate -- --report`. This is deliberate: a stored count would put every
+single-entry PR on the same line of one shared file, guaranteeing merge conflicts between
+concurrent issue-form PRs.
 
 ---
 

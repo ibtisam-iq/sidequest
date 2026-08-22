@@ -9,6 +9,11 @@ body:
         Thanks for contributing. Submitting this form opens a pull request automatically -
         you don't need to touch any YAML.
 
+        **Before you submit:** sidequest is a log of things worth rescuing from being forgotten,
+        not a comprehensive directory of the best or most famous tools. Please don't submit
+        something most people in the relevant field would already know about (LinkedIn, YouTube,
+        Google, and the like) - save the obscure and easily forgotten instead.
+
         The URL is checked against the whole directory first, so duplicates are caught before
         a PR is opened.
 
@@ -35,13 +40,13 @@ body:
     attributes:
       label: Category
       description: >
-        A top-level category, or `parent/sub` for one with subcategories, e.g. `dev-tools`,
-        `ai-tools/ai-coding-agents`, `islamic-resources/lectures`. See taxonomy/categories.yaml
-        for the current tree. A new category or subcategory is fine - it gets registered
-        automatically, and the PR will flag it if it looks like a near-duplicate of an existing
-        sibling. Entries under `shadow-libraries/...` automatically get a legal-risk warning
-        badge - that category is only for shadow libraries and similar copyright-risk resources.
-      placeholder: dev-tools or ai-tools/ai-coding-agents
+        One of the six roots - career, faith, finance, learning, lifestyle, technology - optionally
+        with `/sub` for a subcategory, e.g. `technology`, `technology/ai-coding-agents`,
+        `faith/lectures`. See taxonomy/categories.yaml for the current subcategories. A new
+        subcategory is fine - it gets registered automatically, and the PR will flag it if it
+        looks like a near-duplicate of an existing sibling. The six roots themselves don't
+        change; if unsure which fits, see the classification precedence rule in CLAUDE.md.
+      placeholder: technology or technology/ai-coding-agents
     validations:
       required: true
 

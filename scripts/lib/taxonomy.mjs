@@ -6,6 +6,20 @@ import { slugify, isValidSlug } from './slugify.mjs';
 import { findNearMatches } from './levenshtein.mjs';
 
 /**
+ * Exact category paths that require every entry filed there to disclose legal_risk: true, and
+ * where nothing else may set it. Shadow-library-style content (things a visitor might not
+ * realize carry copyright/legal exposure) is filed by content type under whichever of the six
+ * roots actually fits it, rather than living under one shared "shadow-libraries" parent - so
+ * this has to be an exact-path list, not a category prefix. scripts/validate.mjs enforces it,
+ * scripts/add-link.mjs and scripts/lib/issue-form.mjs both read it so all three can't drift.
+ */
+export const LEGAL_RISK_REQUIRED_CATEGORIES = [
+  'learning/books-academic-papers',
+  'lifestyle/movies-torrents',
+  'technology/cracked-software-apks',
+];
+
+/**
  * The open category/country registry - a two-level tree for `links`, a flat list for
  * `companies`. Each record is { slug, name, type, parent? }. No `parent` means top-level; a
  * `parent` (a top-level slug of the same type) makes it a subcategory. Only two levels are

@@ -8,14 +8,22 @@
 #   type    links | companies
 #   parent  omitted for a top-level category; set to a top-level slug for a subcategory
 #
-# For `links`, a top-level entry (no `parent`) is a parent category; an entry with `parent` set
-# is one of its subcategories. A link's `category` field is a path: `parent-slug` for a flat
-# top-level category with no subcategories, or `parent-slug/sub-slug` for one that has them.
-# Only two levels are supported - a subcategory can never itself be a parent.
+# For `links`, the SIX TOP-LEVEL ROOTS are fixed, durable life-domain categories, not
+# implementation categories or trend words: Career, Faith, Finance, Learning, Lifestyle,
+# Technology. Nav order is always alphabetical - no manual reordering by perceived importance.
+# There is deliberately no "AI" root; AI-related entries live under Technology as subcategories.
+# See CLAUDE.md for the classification precedence rule used to place an entry among these six
+# when it could plausibly fit more than one.
+#
+# Only two levels are supported - a subcategory can never itself be a parent. A subcategory
+# named after its old flat top-level category (e.g. `dev-tools`, `ai-tools`) is a generic bucket
+# for entries that don't fit a more specific sibling - not a sign the hierarchy is deeper than
+# two levels.
 #
 # For `companies`, the registry key is still the COUNTRY (mirroring data/companies/<country>/)
 # and stays flat - `parent` is never set for a companies entry. Industry is free-form and not
-# registered here, same as before.
+# registered here. Companies are surfaced in the site under /career/companies, but that is a
+# navigation/routing decision, not a taxonomy one - this registry is unaffected by it.
 #
 # Entry counts are NOT stored. They are computed at build time by the site and by
 # `npm run validate -- --report`. Storing them would put every single-entry PR on the same line
@@ -23,182 +31,188 @@
 #
 # Adding a category: use `npm run add-link` / `npm run add-company`, which normalizes the slug
 # and fuzzy-matches it against its SIBLINGS - other subcategories of the same parent, or other
-# top-level categories if you're adding a new parent - not the whole registry. That's what stops
-# "AI Chat Assistants" from fuzzy-matching against "Business & Company Research" just because
-# both happen to be subcategories of something. Adding by hand is fine too - just run
-# `npm run validate` afterward.
+# top-level categories if you're adding a new parent - not the whole registry. Adding by hand is
+# fine too - just run `npm run validate` afterward.
 
-- slug: dev-tools
-  name: Dev Tools
-  type: links
-- slug: cli-terminal
-  name: CLI & Terminal
-  type: links
-  parent: dev-tools
-- slug: linux-distros-vms
-  name: Linux Distros & VMs
-  type: links
-  parent: dev-tools
-- slug: networking-ip-utilities
-  name: Networking & IP Utilities
-  type: links
-  parent: dev-tools
-- slug: roadmaps-references
-  name: Roadmaps & References
-  type: links
-  parent: dev-tools
-
-- slug: ai-tools
-  name: AI Tools
-  type: links
-- slug: ai-chat-assistants
-  name: AI Chat Assistants
-  type: links
-  parent: ai-tools
-- slug: ai-coding-agents
-  name: AI Coding Agents
-  type: links
-  parent: ai-tools
-- slug: ai-directories-aggregators
-  name: AI Directories & Aggregators
-  type: links
-  parent: ai-tools
-- slug: ai-writing
-  name: AI Writing
-  type: links
-  parent: ai-tools
-- slug: ai-for-freelancers
-  name: AI for Freelancers
-  type: links
-  parent: ai-tools
-
-- slug: learning-courses
-  name: Learning & Courses
-  type: links
-- slug: moocs-certifications
-  name: MOOCs & Certifications
-  type: links
-  parent: learning-courses
-- slug: data-science-programming
-  name: Data Science & Programming
-  type: links
-  parent: learning-courses
-- slug: free-books-references
-  name: Free Books & References
-  type: links
-  parent: learning-courses
-
-- slug: design-inspiration
-  name: Design Inspiration
-  type: links
-
-- slug: productivity-utilities
-  name: Productivity & Utilities
-  type: links
-- slug: notes-docs
-  name: Notes & Docs
-  type: links
-  parent: productivity-utilities
-- slug: pdf-file-tools
-  name: PDF & File Tools
-  type: links
-  parent: productivity-utilities
-- slug: image-text-utilities
-  name: Image & Text Utilities
-  type: links
-  parent: productivity-utilities
-- slug: task-management
-  name: Task Management
-  type: links
-  parent: productivity-utilities
-- slug: screen-recording-meetings
-  name: Screen Recording & Meetings
-  type: links
-  parent: productivity-utilities
-- slug: url-shorteners
-  name: URL Shorteners
-  type: links
-  parent: productivity-utilities
-
-- slug: fintech-payments
-  name: Fintech & Payments
-  type: links
-- slug: pakistan-payment-apps
-  name: Pakistan Payment Apps
-  type: links
-  parent: fintech-payments
-- slug: international-remittance
-  name: International Remittance
-  type: links
-  parent: fintech-payments
-- slug: crypto-wallets-exchanges
-  name: Crypto Wallets & Exchanges
-  type: links
-  parent: fintech-payments
-
-- slug: ecommerce-seller-tools
-  name: Ecommerce Seller Tools
-  type: links
-
-- slug: business-research
-  name: Business & Company Research
-  type: links
-
-- slug: job-hunting-career
-  name: Job Hunting & Career
+- slug: career
+  name: Career
   type: links
 - slug: job-boards
   name: Job Boards
   type: links
-  parent: job-hunting-career
+  parent: career
 - slug: resume-application-tools
   name: Resume & Application Tools
   type: links
-  parent: job-hunting-career
+  parent: career
 - slug: career-research
   name: Career Research
   type: links
-  parent: job-hunting-career
+  parent: career
+- slug: ecommerce-seller-tools
+  name: Ecommerce Seller Tools
+  type: links
+  parent: career
+- slug: business-research
+  name: Business & Company Research
+  type: links
+  parent: career
 
-- slug: islamic-resources
-  name: Islamic Resources
+- slug: faith
+  name: Faith
   type: links
 - slug: quran-hadith
   name: Quran & Hadith
   type: links
-  parent: islamic-resources
+  parent: faith
 - slug: books-fatwa
   name: Books & Fatwa
   type: links
-  parent: islamic-resources
+  parent: faith
 - slug: lectures
   name: Lectures
   type: links
-  parent: islamic-resources
+  parent: faith
 
-- slug: github-repos
-  name: GitHub Repos
+- slug: finance
+  name: Finance
   type: links
+- slug: pakistan-payment-apps
+  name: Pakistan Payment Apps
+  type: links
+  parent: finance
+- slug: international-remittance
+  name: International Remittance
+  type: links
+  parent: finance
+- slug: crypto-wallets-exchanges
+  name: Crypto Wallets & Exchanges
+  type: links
+  parent: finance
+- slug: fintech-payments
+  name: Fintech & Payments
+  type: links
+  parent: finance
 
-- slug: newsletters
-  name: Newsletters
+- slug: learning
+  name: Learning
   type: links
-
-- slug: shadow-libraries
-  name: Shadow Libraries
+- slug: moocs-certifications
+  name: MOOCs & Certifications
   type: links
+  parent: learning
+- slug: data-science-programming
+  name: Data Science & Programming
+  type: links
+  parent: learning
+- slug: free-books-references
+  name: Free Books & References
+  type: links
+  parent: learning
 - slug: books-academic-papers
   name: Books & Academic Papers
   type: links
-  parent: shadow-libraries
+  parent: learning
+
+- slug: lifestyle
+  name: Lifestyle
+  type: links
+- slug: notes-docs
+  name: Notes & Docs
+  type: links
+  parent: lifestyle
+- slug: pdf-file-tools
+  name: PDF & File Tools
+  type: links
+  parent: lifestyle
+- slug: image-text-utilities
+  name: Image & Text Utilities
+  type: links
+  parent: lifestyle
+- slug: task-management
+  name: Task Management
+  type: links
+  parent: lifestyle
+- slug: screen-recording-meetings
+  name: Screen Recording & Meetings
+  type: links
+  parent: lifestyle
+- slug: url-shorteners
+  name: URL Shorteners
+  type: links
+  parent: lifestyle
 - slug: movies-torrents
   name: Movies & Torrents
   type: links
-  parent: shadow-libraries
+  parent: lifestyle
+- slug: newsletters
+  name: Newsletters
+  type: links
+  parent: lifestyle
+- slug: productivity-utilities
+  name: Productivity & Utilities
+  type: links
+  parent: lifestyle
+
+- slug: technology
+  name: Technology
+  type: links
+- slug: cli-terminal
+  name: CLI & Terminal
+  type: links
+  parent: technology
+- slug: linux-distros-vms
+  name: Linux Distros & VMs
+  type: links
+  parent: technology
+- slug: networking-ip-utilities
+  name: Networking & IP Utilities
+  type: links
+  parent: technology
+- slug: roadmaps-references
+  name: Roadmaps & References
+  type: links
+  parent: technology
+- slug: ai-chat-assistants
+  name: AI Chat Assistants
+  type: links
+  parent: technology
+- slug: ai-coding-agents
+  name: AI Coding Agents
+  type: links
+  parent: technology
+- slug: ai-directories-aggregators
+  name: AI Directories & Aggregators
+  type: links
+  parent: technology
+- slug: ai-writing
+  name: AI Writing
+  type: links
+  parent: technology
+- slug: ai-for-freelancers
+  name: AI for Freelancers
+  type: links
+  parent: technology
+- slug: ai-tools
+  name: AI Tools
+  type: links
+  parent: technology
+- slug: design-inspiration
+  name: Design Inspiration
+  type: links
+  parent: technology
+- slug: github-repos
+  name: GitHub Repos
+  type: links
+  parent: technology
 - slug: cracked-software-apks
   name: Cracked Software & APKs
   type: links
-  parent: shadow-libraries
+  parent: technology
+- slug: dev-tools
+  name: Dev Tools
+  type: links
+  parent: technology
 
 - slug: pakistan
   name: Pakistan

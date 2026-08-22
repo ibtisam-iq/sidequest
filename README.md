@@ -2,14 +2,16 @@
 
 # sidequest
 
-**An open directory of things worth remembering.**
+**A personal log of things worth rescuing from being forgotten.**
 
-Tools, GitHub repos, articles, books, courses, communities, remote job boards, referral links -
-plus a directory of notable tech companies, organised by country.
+Not a comprehensive directory of the best or most important tools - the value here is capturing
+the obscure and easily forgotten, found incidentally while doing something else, not being
+exhaustive. Never LinkedIn, YouTube, Google, or anything a typical person in the field would
+already know about.
 
 [**sidequest.ibtisam-iq.com**](https://sidequest.ibtisam-iq.com) ·
 [Browse links](https://sidequest.ibtisam-iq.com/links) ·
-[Companies](https://sidequest.ibtisam-iq.com/companies) ·
+[Companies](https://sidequest.ibtisam-iq.com/career/companies) ·
 [Add an entry](https://github.com/ibtisam-iq/sidequest/issues/new/choose)
 
 [![Validate](https://github.com/ibtisam-iq/sidequest/actions/workflows/validate.yml/badge.svg)](https://github.com/ibtisam-iq/sidequest/actions/workflows/validate.yml)
@@ -27,7 +29,9 @@ unsorted links is not a system. sidequest is that pile turned into something sea
 enough structure to stay useful as it grows.
 
 It's inspired by [Awesome Lists](https://github.com/sindresorhus/awesome) and
-[free-for.dev](https://free-for.dev), but built to do the two things a markdown list can't:
+[free-for.dev](https://free-for.dev), but the comparison stops at mechanics - those projects aim
+for comprehensiveness within a niche; sidequest deliberately does not, per the founding principle
+above. What it borrows is the two things a markdown list can't do:
 
 - **Scale** - hundreds of categories and thousands of entries, without a slow build or an
   unusable page.
@@ -38,15 +42,19 @@ Every entry is a **flat YAML file in git**. There is no database and no accounts
 disappears tomorrow, the data is still a folder of readable text files you can grep, fork, or
 import somewhere else.
 
+Links are organized under **six fixed life-domain roots** - Career, Faith, Finance, Learning,
+Lifestyle, Technology - always shown alphabetically, each with open subcategories underneath.
+Companies are a feature of Career (`/career/companies`), not a separate top-level section.
+
 ## Two kinds of entry
 
 **Links** - anything worth saving: a tool, a repo, an article, a course, a community, a job board.
 
 ```yaml
-# data/links/dev-tools/cli-terminal/ghostty.yaml
+# data/links/technology/cli-terminal/ghostty.yaml
 url: https://ghostty.org
 title: Ghostty
-category: dev-tools/cli-terminal
+category: technology/cli-terminal
 description: A fast, native, GPU-accelerated terminal emulator with zero-config sane defaults.
 tags: [terminal, cli, open-source]
 priority: high
@@ -57,7 +65,8 @@ source: local
 ```
 
 **Companies** - a proper directory, not just a link, because companies need country, industry and
-hiring filters that a tool entry has no use for.
+hiring filters that a tool entry has no use for. Surfaced on the site as a Career feature
+(`/career/companies`), but the schema and data folder are unaffected by that.
 
 ```yaml
 # data/companies/pakistan/arbisoft.yaml
@@ -83,11 +92,13 @@ research grows.
   so a filtered view is linkable.
 - **Alternatives, both ways.** An entry lists similar tools, and the relationship shows up on both
   entries - if A names B, B's page shows A without anyone having to write it twice.
-- **An open, two-level taxonomy.** Categories are `parent` or `parent/sub` (dev-tools,
-  ai-tools/ai-coding-agents), not a fixed enum - the registry grows, with fuzzy matching scoped to
-  siblings so `ai-tool` and `ai-tools` can't both exist under the same parent.
-- **A legal-risk disclosure.** Any entry under `shadow-libraries/...` carries a visible warning
-  badge and a `legal_risk: true` flag that validation enforces, never leaves optional.
+- **Six fixed roots, open subcategories.** Categories are `root` or `root/sub` (technology,
+  technology/ai-coding-agents) under one of Career, Faith, Finance, Learning, Lifestyle,
+  Technology - the roots never change, but subcategories grow, with fuzzy matching scoped to
+  siblings so `ai-chat-assistant` and `ai-chat-assistants` can't both exist under the same root.
+- **A legal-risk disclosure.** Shadow-library-style entries are filed by content type under
+  whichever root fits, carrying a visible warning badge and a `legal_risk: true` flag that
+  validation enforces both ways - required where it applies, rejected everywhere else.
 - **A JSON API** at [`/api/entries.json`](https://sidequest.ibtisam-iq.com/api/entries.json), and
   an [`llms.txt`](https://sidequest.ibtisam-iq.com/llms.txt) describing the data model for agents.
 
@@ -138,7 +149,7 @@ npm run preview           # serve the built output
 ## Repo layout
 
 ```
-data/links/<parent>[/<sub>]/<slug>.yaml  the entries - one folder per category level, max two
+data/links/<root>[/<sub>]/<slug>.yaml    root is one of the six fixed life-domain roots
 data/companies/<country>/<slug>.yaml     companies stay a flat single level
 taxonomy/categories.yaml                 the open category/country registry
 schema/*.json                           JSON Schema - the source of truth for validation

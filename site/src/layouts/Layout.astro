@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import MegaMenu from '../components/MegaMenu.astro';
+import { getData, getLinkCategoryTree } from '../lib/data';
 
 interface Props {
   title: string;
@@ -17,13 +19,17 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = new URL('/og.svg', Astro.site).href;
 const fullTitle = title === 'sidequest' ? title : `${title} · sidequest`;
 
-const nav = [
-  { href: '/links', label: 'Links' },
-  { href: '/companies', label: 'Companies' },
-  { href: '/search', label: 'Search' },
-];
-
 const path = Astro.url.pathname;
+
+// The mega-menu is the primary site nav on every page now, not a widget scoped to /links - so
+// it lives here, and figures out which root/subcategory (if any) the current page belongs to
+// from the URL alone rather than every page having to pass that down explicitly.
+const [tree, data] = await Promise.all([getLinkCategoryTree(), getData()]);
+
+const linksMatch = path.match(/^\/links\/([^/]+)(?:\/([^/]+))?/);
+const onCompanies = path.startsWith('/career/companies');
+const currentParent = onCompanies ? 'career' : (linksMatch?.[1] ?? null);
+const currentSub = onCompanies ? null : (linksMatch?.[2] ?? null);
 ---
 
 <!doctype html>
@@ -75,25 +81,19 @@ const path = Astro.url.pathname;
           <span class="brand-name">sidequest</span>
         </a>
 
-        <nav aria-label="Primary">
-          {
-            nav.map((item) => (
-              <a
-                href={item.href}
-                class="nav-link"
-                aria-current={path === item.href || path.startsWith(`${item.href}/`) ? 'page' : undefined}
-              >
-                {item.label}
-              </a>
-            ))
-          }
-        </nav>
-
         <div class="header-actions">
+          <a
+            class="nav-link"
+            href="/search"
+            aria-current={path === '/search' ? 'page' : undefined}
+          >
+            Search
+          </a>
           <ThemeToggle />
           <a
             class="gh"
             href="https://github.com/ibtisam-iq/sidequest"
+            target="_blank"
             rel="noopener"
             aria-label="sidequest on GitHub"
           >
@@ -105,6 +105,14 @@ const path = Astro.url.pathname;
           </a>
         </div>
       </div>
+
+      <MegaMenu
+        tree={tree}
+        currentParent={currentParent}
+        currentSub={currentSub}
+        onCompanies={onCompanies}
+        companiesCount={data.companies.length}
+      />
     </header>
 
     <main id="main">
@@ -117,9 +125,22 @@ const path = Astro.url.pathname;
           <strong>sidequest</strong> - an open directory of things worth remembering.
         </p>
         <p class="muted">
-          <a href="https://github.com/ibtisam-iq/sidequest">Source</a> ·
-          <a href="https://github.com/ibtisam-iq/sidequest/blob/main/CONTRIBUTING.md">Contribute</a> ·
-          <a href="https://github.com/ibtisam-iq/sidequest/issues/new/choose">Suggest an entry</a>
+          <a href="https://github.com/ibtisam-iq/sidequest" target="_blank" rel="noopener">Source</a> ·
+          <a
+            href="https://github.com/ibtisam-iq/sidequest/blob/main/CONTRIBUTING.md"
+            target="_blank"
+            rel="noopener"
+          >
+            Contribute
+          </a>
+          ·
+          <a
+            href="https://github.com/ibtisam-iq/sidequest/issues/new/choose"
+            target="_blank"
+            rel="noopener"
+          >
+            Suggest an entry
+          </a>
           · MIT
         </p>
       </div>
@@ -140,6 +161,7 @@ const path = Astro.url.pathname;
   .header-inner {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--sp-5);
     height: 60px;
   }
@@ -162,12 +184,6 @@ const path = Astro.url.pathname;
     border-radius: 5px;
     background: linear-gradient(135deg, var(--accent), var(--company));
     box-shadow: var(--shadow-sm);
-  }
-
-  nav {
-    display: flex;
-    gap: var(--sp-1);
-    margin-right: auto;
   }
 
   .nav-link {

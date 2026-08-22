@@ -80,7 +80,7 @@ const jsonLd = {
 
         <div>
           <h1>{title}</h1>
-          <a class="host" href={url} rel="noopener nofollow ugc">{host} ↗</a>
+          <a class="host" href={url} target="_blank" rel="noopener nofollow ugc">{host} ↗</a>
         </div>
       </header>
 
@@ -96,10 +96,11 @@ const jsonLd = {
       {description && <p class="lede">{description}</p>}
 
       <div class="actions" data-pagefind-ignore>
-        <a class="btn primary" href={url} rel="noopener nofollow ugc">Visit {title}</a>
+        <a class="btn primary" href={url} target="_blank" rel="noopener nofollow ugc">Visit {title}</a>
         <a
           class="btn"
           href={`https://github.com/ibtisam-iq/sidequest/blob/main/data/links/${entry.data.category}/${slug}.yaml`}
+          target="_blank"
           rel="noopener"
         >
           View YAML
@@ -149,7 +150,7 @@ const jsonLd = {
             <div>
               <dt>Added by</dt>
               <dd>
-                <a href={`https://github.com/${added_by}`} rel="noopener">
+                <a href={`https://github.com/${added_by}`} target="_blank" rel="noopener">
                   @{added_by}
                 </a>
               </dd>

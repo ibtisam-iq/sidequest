@@ -84,7 +84,7 @@
     },
     "legal_risk": {
       "type": "boolean",
-      "description": "Set true when the entry may involve copyright infringement or similar legal exposure depending on the visitor's jurisdiction (e.g. shadow libraries, cracked software). Renders a visible warning badge on the card and entry page. Required true for every entry whose category path starts with shadow-libraries/ - validate.mjs enforces this, it is not optional styling."
+      "description": "Set true when the entry may involve copyright infringement or similar legal exposure depending on the visitor's jurisdiction (e.g. shadow libraries, cracked software). Renders a visible warning badge on the card and entry page. Required true for every entry filed under learning/books-academic-papers, lifestyle/movies-torrents, or technology/cracked-software-apks, and invalid anywhere else - validate.mjs enforces this, it is not optional styling."
     }
   }
 }

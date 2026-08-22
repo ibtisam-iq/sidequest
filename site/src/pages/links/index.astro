@@ -1,7 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Browse from '../../components/Browse.astro';
-import MegaMenu from '../../components/MegaMenu.astro';
 import { getCardItems, getLinkCategoryTree } from '../../lib/data';
 
 const items = (await getCardItems()).filter((i) => i.type === 'link');
@@ -78,8 +77,6 @@ const jsonLd = {
 
 <Layout title="All links" description={description}>
   <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
-
-  <MegaMenu tree={tree} currentParent={null} currentSub={null} />
 
   <div class="wrap page">
     <header class="page-head" data-pagefind-ignore>

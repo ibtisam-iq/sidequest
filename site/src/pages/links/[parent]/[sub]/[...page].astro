@@ -2,10 +2,9 @@
 import type { GetStaticPaths } from 'astro';
 import Layout from '../../../../layouts/Layout.astro';
 import EntryCard from '../../../../components/EntryCard.astro';
-import MegaMenu from '../../../../components/MegaMenu.astro';
 import Breadcrumbs from '../../../../components/Breadcrumbs.astro';
 import Pagination from '../../../../components/Pagination.astro';
-import { getData, getCardItems, getLinkCategoryTree } from '../../../../lib/data';
+import { getData, getCardItems } from '../../../../lib/data';
 
 export const getStaticPaths = (async ({ paginate }) => {
   const [data, items] = await Promise.all([getData(), getCardItems()]);
@@ -43,8 +42,6 @@ export const getStaticPaths = (async ({ paginate }) => {
 const { page, parentName, subName } = Astro.props;
 const { parent, sub } = Astro.params;
 
-const tree = await getLinkCategoryTree();
-
 const pageLabel = page.currentPage > 1 ? ` - page ${page.currentPage}` : '';
 const description = `${subName} (${parentName}) in the sidequest directory - ${page.total} curated ${
   page.total === 1 ? 'entry' : 'entries'
@@ -77,8 +74,6 @@ const jsonLd = {
   canonical={page.currentPage > 1 ? canonical : undefined}
 >
   <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
-
-  <MegaMenu tree={tree} currentParent={parent!} currentSub={sub!} />
 
   <div class="wrap page">
     <Breadcrumbs

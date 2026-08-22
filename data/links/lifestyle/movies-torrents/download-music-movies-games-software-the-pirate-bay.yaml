@@ -1,0 +1,12 @@
+url: https://thepiratebay.org/
+title: Download music, movies, games, software! The Pirate Bay
+category: lifestyle/movies-torrents
+description: >-
+  Download music, movies, games, software and much more. The Pirate Bay is the galaxy's most
+  resilient BitTorrent site.
+tags:
+  - torrents
+priority: medium
+legal_risk: true
+date_added: '2025-06-24'
+source: local

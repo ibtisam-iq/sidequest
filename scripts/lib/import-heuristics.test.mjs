@@ -4,7 +4,7 @@ import { guessCategory } from './import-heuristics.mjs';
 
 test('a known domain resolves at high confidence with its registered category', () => {
   const result = guessCategory({ title: 'roadmap.sh', excerpt: '', url: 'https://roadmap.sh/' });
-  assert.equal(result.categoryPath, 'dev-tools/roadmaps-references');
+  assert.equal(result.categoryPath, 'technology/roadmaps-references');
   assert.equal(result.confidence, 'high');
   assert.equal(result.legalRisk, false);
 });
@@ -15,7 +15,7 @@ test('a shadow-library domain carries legal_risk regardless of title/excerpt con
     excerpt: 'nothing suspicious here',
     url: 'https://sci-hub.se/',
   });
-  assert.equal(result.categoryPath, 'shadow-libraries/books-academic-papers');
+  assert.equal(result.categoryPath, 'learning/books-academic-papers');
   assert.equal(result.legalRisk, true);
 });
 
@@ -30,7 +30,7 @@ test('an Islamic lecture is recognised by keyword even off an unlisted YouTube U
     excerpt: '',
     url: 'https://www.youtube.com/watch?v=5PRbRDt1mgM',
   });
-  assert.equal(result.categoryPath, 'islamic-resources/lectures');
+  assert.equal(result.categoryPath, 'faith/lectures');
   assert.equal(result.confidence, 'medium');
 });
 
@@ -41,7 +41,7 @@ test('keyword matching tolerates inconsistent hyphenation in scraped titles', ()
     excerpt: '',
     url: 'https://youtube.com/watch?v=O8CaqN1m4IQ',
   });
-  assert.equal(result.categoryPath, 'islamic-resources/lectures');
+  assert.equal(result.categoryPath, 'faith/lectures');
 });
 
 test('an unrecognised domain with no keyword match reports low confidence and no guess', () => {

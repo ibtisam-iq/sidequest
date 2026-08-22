@@ -1,8 +1,10 @@
 # sidequest
 
-> An open, curated directory of things worth remembering: developer and AI tools, GitHub repos,
-> articles, books, courses, communities, remote job boards, referral links, and a directory of
-> notable tech companies organised by country.
+> A personal log of things worth rescuing from being forgotten - tools, GitHub repos, articles,
+> books, courses, communities, remote job boards, referral links, and notable tech companies -
+> found incidentally while doing something else. Not a comprehensive directory of the best or
+> most famous tools; deliberately excludes things a typical person in the field would already
+> know about (LinkedIn, YouTube, Google, and the like).
 
 sidequest is a static site generated from flat YAML files in a public git repository. There is no
 database and no user accounts. Every entry is a single YAML file, so the underlying data is easy
@@ -12,15 +14,21 @@ to read, fork, and reuse.
 
 Two entity types, with separate schemas:
 
-- **Links** (`data/links/<category>/<slug>.yaml`) - any saved resource. Required fields: url,
-  title, category, tags, priority (high|medium|low), date_added, source. Optional: note,
-  description, added_by, alternatives, audience.
-- **Companies** (`data/companies/<country>/<slug>.yaml`) - tech companies worth knowing about.
-  Required: name, website, country, industry, date_added, source. Optional: careers_url,
-  hiring_status, size, rating, tags, remote_policy.
+- **Links** (`data/links/<root>[/<sub>]/<slug>.yaml`) - any saved resource, filed under one of
+  six fixed life-domain roots (Career, Faith, Finance, Learning, Lifestyle, Technology), each
+  with open subcategories. Required fields: url, title, category (a `root` or `root/sub` path),
+  tags, priority (high|medium|low), date_added, source. Optional: note, description, added_by,
+  alternatives, audience, legal_risk (required true under three specific categories that carry a
+  legal-risk disclosure: learning/books-academic-papers, lifestyle/movies-torrents,
+  technology/cracked-software-apks).
+- **Companies** (`data/companies/<country>/<slug>.yaml`) - tech companies worth knowing about,
+  surfaced on the site as a feature of Career rather than a separate top-level section. Required:
+  name, website, country, industry, date_added, source. Optional: careers_url, hiring_status,
+  size, rating, tags, remote_policy.
 
-Categories live in an open registry (`taxonomy/categories.yaml`) rather than a fixed enum, so the
-taxonomy grows with the directory. Tags are free-form. Entry counts are computed, never stored.
+Subcategories live in an open registry (`taxonomy/categories.yaml`) rather than a fixed enum, so
+they grow with the directory - but the six top-level roots themselves are fixed. Tags are
+free-form. Entry counts are computed, never stored.
 
 The `alternatives` field is declared one-way but presented both ways: if entry A lists B as an
 alternative, B's page also shows A.
@@ -33,10 +41,10 @@ alternative, B's page also shows A.
 
 ## Key pages
 
-- https://sidequest.ibtisam-iq.com/ - overview, categories, recent and top entries
+- https://sidequest.ibtisam-iq.com/ - overview, the six category roots, recent and top entries
 - https://sidequest.ibtisam-iq.com/links - all links, filterable by category, priority, audience, tag
-- https://sidequest.ibtisam-iq.com/companies - company directory, filterable by country, industry,
-  hiring status, remote policy and size
+- https://sidequest.ibtisam-iq.com/career/companies - company directory, filterable by country,
+  industry, hiring status, remote policy and size
 - https://sidequest.ibtisam-iq.com/search - full-text search
 
 ## License

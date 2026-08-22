@@ -9,8 +9,13 @@ body:
         Thanks for contributing. Submitting this form opens a pull request automatically -
         you don't need to touch any YAML.
 
+        **Before you submit:** sidequest is a log of things worth rescuing from being forgotten,
+        not a comprehensive company directory - a lesser-known company worth knowing about fits
+        better than a household name everyone in the field already knows.
+
         This is for the **companies directory** (organised by country, filterable by industry and
-        hiring status). For a tool, article or anything else, use *Add a link* instead.
+        hiring status, surfaced on the site as a Career feature). For a tool, article or anything
+        else, use *Add a link* instead.
 
   - type: input
     id: name

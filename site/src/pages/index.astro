@@ -13,11 +13,20 @@ const [linkTree, countries] = await Promise.all([
 const recent = items.slice(0, 6);
 const featured = items.filter((i) => i.priority === 'high').slice(0, 6);
 
-const populatedTree = linkTree.filter((c) => c.count > 0);
+// A one-line sense of what lives under each root - the six domains are permanent now, so the
+// grid can afford to explain itself rather than just naming a slug.
+const ROOT_BLURBS: Record<string, string> = {
+  career: 'Job boards, resumes, business and company research',
+  faith: 'Quran, hadith, books, fatwa and lectures',
+  finance: 'Payments, remittance, crypto and digital banking',
+  learning: 'Courses, MOOCs, references and academic papers',
+  lifestyle: 'Everyday tools, utilities, newsletters and media',
+  technology: 'Dev tools, AI, design, GitHub repos and more',
+};
 
 const stats = [
   { value: items.length, label: 'entries' },
-  { value: populatedTree.length, label: 'categories' },
+  { value: linkTree.length, label: 'life domains' },
   { value: data.companies.length, label: 'companies' },
   { value: data.tagCounts.size, label: 'tags' },
 ];
@@ -88,30 +97,49 @@ const jsonLd = {
     <div class="section-head">
       <div>
         <h2>Browse by category</h2>
-        <p class="muted">{populatedTree.length} categories with entries.</p>
+        <p class="muted">Six life domains, always in this order - not ranked by size.</p>
       </div>
       <a class="more" href="/links">All links →</a>
     </div>
 
-    <div class="cat-grid">
+    <div class="domain-grid">
       {
-        populatedTree.map((category) => (
-          <a class="cat" href={`/links/${category.slug}`}>
-            <span class="cat-name">{category.name}</span>
-            <span class="cat-count">{category.count}</span>
-          </a>
-        ))
-      }
-      {
-        countries.filter((c) => c.count > 0).map((country) => (
-          <a class="cat cat-company" href={`/companies/${country.slug}`}>
-            <span class="cat-name">{country.name}</span>
-            <span class="cat-count">{country.count}</span>
+        linkTree.map((category) => (
+          <a class="domain" href={`/links/${category.slug}`}>
+            <div class="domain-top">
+              <span class="domain-name">{category.name}</span>
+              <span class="cat-count">{category.count}</span>
+            </div>
+            <p class="domain-blurb">{ROOT_BLURBS[category.slug]}</p>
+            <span class="domain-arrow" aria-hidden="true">→</span>
           </a>
         ))
       }
     </div>
   </section>
+
+  {
+    data.companies.length > 0 && (
+      <section class="wrap block">
+        <div class="section-head">
+          <div>
+            <h2>Companies</h2>
+            <p class="muted">A Career feature - tech companies worth knowing about, by country.</p>
+          </div>
+          <a class="more" href="/career/companies">All companies →</a>
+        </div>
+
+        <div class="cat-grid">
+          {countries.filter((c) => c.count > 0).map((country) => (
+            <a class="cat cat-company" href={`/career/companies/${country.slug}`}>
+              <span class="cat-name">{country.name}</span>
+              <span class="cat-count">{country.count}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
 
   {
     featured.length > 0 && (
@@ -274,6 +302,72 @@ const jsonLd = {
     white-space: nowrap;
   }
 
+  .domain-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+
+  .domain {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-5);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--fg);
+    transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+  }
+
+  .domain:hover {
+    border-color: var(--accent-border);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+
+  .domain-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+  }
+
+  .domain-name {
+    font-size: var(--text-lg);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .domain-blurb {
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
+
+  .domain-arrow {
+    position: absolute;
+    bottom: var(--sp-4);
+    right: var(--sp-5);
+    color: var(--accent);
+    font-weight: 600;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.16s, transform 0.16s;
+  }
+
+  .domain:hover .domain-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .domain:hover .domain-name {
+    color: var(--accent);
+  }
+
   .cat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -324,6 +418,12 @@ const jsonLd = {
     gap: var(--sp-4);
   }
 
+  @media (max-width: 900px) {
+    .domain-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
   @media (max-width: 640px) {
     .hero {
       padding-block: var(--sp-7) var(--sp-6);
@@ -332,6 +432,9 @@ const jsonLd = {
       gap: var(--sp-5);
     }
     .grid {
+      grid-template-columns: 1fr;
+    }
+    .domain-grid {
       grid-template-columns: 1fr;
     }
   }

@@ -1,0 +1,129 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Browse from '../../../components/Browse.astro';
+import CategoryNav from '../../../components/CategoryNav.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import { getCardItems, getCategoriesWithCounts } from '../../../lib/data';
+
+const items = (await getCardItems()).filter((i) => i.type === 'company');
+const countries = await getCategoriesWithCounts();
+
+const facetFrom = (key: keyof (typeof items)[number], label: string, format = (v: string) => v) => {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const value = item[key];
+    if (typeof value === 'string' && value && value !== 'unknown') {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+  }
+  return {
+    key: key === 'hiring_status' ? 'hiring' : key === 'remote_policy' ? 'remote' : String(key),
+    label,
+    options: [...counts]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([value, count]) => ({ value, label: format(value), count })),
+  };
+};
+
+const humanize = (v: string) => v.replace(/-/g, ' ');
+
+const facets = [
+  {
+    key: 'group',
+    label: 'Country',
+    options: countries
+      .filter((c) => c.count > 0)
+      .map((c) => ({ value: c.slug, label: c.name, count: c.count })),
+  },
+  facetFrom('industry', 'Industry', humanize),
+  // Renders even with a single option: "actively hiring" is a useful toggle on its own.
+  { ...facetFrom('hiring_status', 'Hiring', humanize), alwaysShow: true },
+  facetFrom('remote_policy', 'Remote'),
+  facetFrom('size', 'Size'),
+];
+
+const description = `A directory of ${items.length} notable tech companies worth knowing about, organised by country and filterable by industry, hiring status, remote policy and size.`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Companies · sidequest',
+  description,
+  url: new URL('/career/companies', Astro.site).href,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: items.length,
+    itemListElement: items.slice(0, 25).map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.title,
+      url: new URL(item.href, Astro.site).href,
+    })),
+  },
+};
+---
+
+<Layout title="Companies" description={description}>
+  <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <div class="wrap page">
+    <Breadcrumbs items={[{ label: 'Career', href: '/links/career' }, { label: 'Companies' }]} />
+
+    <header class="page-head" data-pagefind-ignore>
+      <p class="eyebrow">Career</p>
+      <h1>Companies</h1>
+      <p class="muted lede">
+        Tech companies worth knowing about, organised by country. Filter by industry, hiring
+        status, remote policy and size - {items.length} listed so far, starting with Pakistan and
+        expanding outward.
+      </p>
+    </header>
+
+    <div class="layout">
+      <CategoryNav categories={countries} base="/career/companies" current={null} label="Countries" />
+
+      <div>
+        {
+          items.length ? (
+            <Browse items={items} facets={facets} topLabel="Hiring first" />
+          ) : (
+            <p class="empty">No companies yet.</p>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .page {
+    padding-block: var(--sp-7) var(--sp-8);
+  }
+
+  .page-head {
+    margin-bottom: var(--sp-6);
+  }
+
+  .page-head h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--sp-2);
+  }
+
+  .lede {
+    margin-top: var(--sp-2);
+    max-width: 62ch;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    gap: var(--sp-6);
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

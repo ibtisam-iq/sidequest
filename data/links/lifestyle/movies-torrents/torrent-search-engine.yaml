@@ -1,0 +1,10 @@
+url: https://1337x.to/
+title: Torrent Search Engine
+category: lifestyle/movies-torrents
+description: 1337x is a search engine to find your favorite torrents.
+tags:
+  - torrents
+priority: medium
+legal_risk: true
+date_added: '2025-06-24'
+source: local

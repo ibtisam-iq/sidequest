@@ -1,0 +1,9 @@
+url: https://speedtest.net/
+title: Speedtest by Ookla - The Global Broadband Speed Test
+category: technology/networking-ip-utilities
+description: Use Speedtest on all your devices with our free desktop and mobile apps.
+tags:
+  - internet-speed
+priority: medium
+date_added: '2025-07-06'
+source: local

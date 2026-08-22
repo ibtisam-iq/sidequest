@@ -942,3 +942,143 @@ the two-level taxonomy: local CLIs (Phase 1), and the issue-form pipeline (Phase
 (README, CONTRIBUTING, CLAUDE.md, the issue form) all describe the tree as it actually exists.
 
 This closes out the two-level taxonomy restructuring and bulk-import task.
+
+## 2026-08-23 - Major restructuring: the flat 13-category taxonomy replaced with six life-domain roots
+
+A second, larger restructuring, superseding the two-level taxonomy above: **Career, Faith,
+Finance, Learning, Lifestyle, Technology** replace the old flat 13-category list entirely.
+Deliberately no "AI" root - AI entries live under Technology. The engineering underneath (Astro,
+flat YAML, validate.mjs, the Actions pipeline, favicon caching, Pagefind, dark mode, the CLIs) is
+unchanged; what changed is the taxonomy shape, the nav, and the site's stated purpose.
+
+### Phase 1 - The founding principle, written down for the first time
+
+sidequest is **not** a comprehensive directory of the best tools in a category - it's a log of
+things worth rescuing from being forgotten, specifically things found incidentally while doing
+something else that are NOT already famous or well-known (never LinkedIn, YouTube, Google, or
+anything a typical person in the field would already know about). Added as the opening statement
+of `CLAUDE.md`, the opening paragraph of `README.md`, an explicit inclusion criterion in
+`CONTRIBUTING.md`, and a guidance line on both issue forms, shown before submission.
+
+### Phase 2 - New taxonomy.yaml + classification precedence
+
+Rewrote `taxonomy/categories.yaml` from scratch: six top-level roots (alphabetical, fixed), each
+with subcategories carried over from the old tree (re-parented) or newly added as generic
+catch-all buckets (`technology/dev-tools`, `technology/ai-tools`, `finance/fintech-payments`,
+`lifestyle/productivity-utilities`) for entries that used to sit flat under an old top-level
+category with no subcategory of its own.
+
+Documented the exact ordered classification precedence rule in `CLAUDE.md` (religious content →
+Faith; structured teaching/courses → Learning; jobs/hiring/running a business/freelancing →
+Career; money movement → Finance; building/operating tools → Technology; everything else →
+Lifestyle) so future categorization - mine or a contributor's - stays consistent instead of being
+re-judged ad hoc. `scripts/lib/taxonomy.mjs`'s open-registry/fuzzy-matching logic is reused
+unchanged, just repointed at the new root set.
+
+`legal_risk` moved from a category-prefix rule (`shadow-libraries/...`) to an **exact-path list**
+(`LEGAL_RISK_REQUIRED_CATEGORIES` in `scripts/lib/taxonomy.mjs`, imported by `validate.mjs`,
+`add-link.mjs`, and `issue-form.mjs` so the three can't drift), since shadow-library-style content
+no longer shares one parent - it's filed by content type. Also added the missing reverse check:
+`validate.mjs` now rejects `legal_risk: true` set on anything **outside** those three categories,
+not just missing where required.
+
+### Phase 3 - Migrated all 212 real link entries, deleted the old category folders
+
+Wrote a one-off migration script mapping all 37 distinct old category values found in the real
+dataset to their new root/subcategory paths, then ran it: 212 files rewritten in place (new
+`category:` field, moved to the new folder), old folders removed once empty. No entries lost, no
+manual per-file editing. Verified the explicitly-named examples landed exactly as specified:
+claude-code/cursor/ghostty/warp → Technology, remoteok/we-work-remotely → Career, the-odin-project
+→ Learning, awesome-selfhosted → Technology, tldr → Lifestyle. The 17 shadow-library-style entries
+redistributed correctly by content type: 6 books/papers → `learning/books-academic-papers`, 4
+movies/torrents → `lifestyle/movies-torrents`, 7 cracked software → `technology/cracked-software-apks`
+- confirmed via `npm run validate` staying at 218/218 and a scripted check that every `legal_risk`
+entry sits at one of exactly those three paths.
+
+### Phase 4 - Nav rebuild: mega-menu becomes the primary site nav, Companies moves under Career
+
+Removed the "Links" nav pill entirely - it was exposing the internal link/company entity-type
+split in the UI. `MegaMenu.astro`, previously an in-page widget rendered only on `/links/*`
+pages, now renders globally inside `Layout.astro`'s `<header>` on every page, showing the six
+roots (always alphabetical - `.sort()` by name, never by count, per the founding spec) plus an
+"All links" escape hatch. `Layout.astro` derives the current root/subcategory from the URL path
+itself so no page has to pass that down explicitly.
+
+Companies dissolved as a coequal top-level nav entity: physically relocated from
+`site/src/pages/companies/**` to `site/src/pages/career/companies/**` (schema, filtering, and
+CategoryNav UI completely unchanged - only the routes and internal links moved), and surfaced in
+the mega-menu as a visually distinct first entry inside Career's dropdown panel (a divider
+separates it from Career's real subcategories, since it's a different collection entirely, not a
+taxonomy subcategory).
+
+### Phase 5 - External links now open in a new tab
+
+Every off-site link across the site - footer Source/Contribute/Suggest-an-entry, the header
+GitHub icon, both entry pages' host link and "Visit"/"Visit website"/"View careers"/"View YAML"
+buttons, and the `added_by` GitHub profile link - now carries `target="_blank"` alongside its
+existing `rel="noopener"`. Verified via a JS sweep on rendered pages that every `http(s)` link
+has `target="_blank"` and zero internal (`/`-prefixed) links do.
+
+### Phase 6 - Visual design pass
+
+Redesigned the homepage's "Browse by category" section from a dense, count-ranked grid of ~13
+small pills into six larger, permanent "domain tile" cards (name, count, a one-line description
+of what lives there, a hover-reveal arrow) - since the six roots are now fixed and few, the
+section can afford to explain itself rather than just naming a slug. Companies split into its own
+distinct section below, titled and captioned as a Career feature rather than mixed into the same
+grid as the six roots. Added matching styling to the mega-menu's Companies entry and a quieter
+treatment for the "All links" escape hatch so it doesn't read as a seventh root.
+
+### Phase 7 - Bulk re-import governed by the founding principle: **partially blocked, flagging for a decision**
+
+The founding principle didn't exist as an explicit rule when the original bulk import ran, so it
+was never applied as an exclusion filter against fame/well-known-ness - only against the
+site owner's personal-profile links and ephemera, which was the standing rule at the time. A
+retroactive audit of the 212 already-imported entries against the now-explicit rule found a real
+conflict: several entries are unambiguously things "a typical person in the field would already
+know about" - **ChatGPT, Perplexity, Gemini, Grok, DeepSeek** (`technology/ai-chat-assistants`),
+**Binance** (`finance/crypto-wallets-exchanges`), **PayPal, Stripe**
+(`finance/international-remittance`, `finance/fintech-payments`), **Coursera, Udemy**
+(`learning/moocs-certifications`). These were explicitly named and requested in the original
+import task's own instructions, before this rule was written down.
+
+Per the same import task's own instruction ("when genuinely unsure, include it but flag it...
+rather than silently deciding either way"), these were **not deleted**. Deleting real,
+previously-requested curated data is a hard-to-reverse action outside what a bulk-import
+filtering pass should decide unilaterally - it's flagged here for an explicit decision: keep them as
+pre-principle legacy entries, or remove them now that the rule is explicit. Re-running the actual
+import pipeline against the original raw sources (the raindrop CSV, the plain URL list, the
+named-app lookups) was not possible in this session - those source files were scratch inputs
+under the gitignored `import/` directory from the prior session and are no longer present; only
+`import/sources/urls.txt` and a near-empty `review.yaml` (one still-unclassifiable entry) remain
+on disk.
+
+### Phase 8 - Verification
+
+Real-browser pass (desktop 1280px + mobile 375px, light and dark) against the built site:
+
+- Mega-menu hover-expand (desktop) and tap-to-expand (mobile) both work on the new six-root
+  structure; Career's dropdown correctly shows Companies first with a divider, then its five real
+  subcategories, each with live counts.
+- `/career/companies` works exactly as the old `/companies` did - country facets, industry/
+  hiring/remote/size filters, Recent/Hiring-first toggle - confirmed by loading it, filtering, and
+  opening an entry (Systems Limited, Pakistan) whose breadcrumb reads Career / Companies /
+  Pakistan / Systems Limited.
+- A shadow-library-style entry (Anna's Archive) still shows its legal-risk badge and warning
+  banner after moving to `learning/books-academic-papers` - confirmed the re-migration didn't
+  silently drop the disclosure.
+- Every external link on a sampled entry page (company and link) opens in a new tab; a JS-level
+  check on the rendered DOM found zero internal links doing the same.
+- Dark/light theme toggles correctly on the redesigned homepage and persists.
+- Zero console errors across every page visited.
+- One tooling note, not a site bug: the `computer` screenshot tool produced a stable but
+  demonstrably-fake "duplicate header" artifact mid-scroll on this page (confirmed via direct DOM
+  inspection - `document.querySelectorAll('header.site-header').length` was always `1`, correctly
+  positioned at `top: 0`). Worked around by reading scrolled content via `get_page_text`/JS queries
+  instead of screenshots for that specific state; a fresh screenshot at rest was always correct.
+
+`npm test` 86/86 (8 more than the previous entry - hierarchical-category and legal-risk-list
+coverage), `npm run validate` 218/218, `astro check` 0/0/0, site builds to 274 pages (four more
+than before: the three relocated `/career/companies/**` routes plus its country listing).
+
+**Next:** a decision on the Phase 7 conflict above, then this restructuring is fully closed out.

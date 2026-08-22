@@ -47,7 +47,14 @@ const host = (() => {
   {item.description && <p class="desc">{item.description}</p>}
 
   <div class="meta">
-    {!hideGroup && <a class="pill pill-group" href={`/${item.type === 'link' ? 'links' : 'companies'}/${item.group}`}>{item.groupName}</a>}
+    {!hideGroup && (
+      <a
+        class="pill pill-group"
+        href={item.type === 'link' ? `/links/${item.group}` : `/career/companies/${item.group}`}
+      >
+        {item.groupName}
+      </a>
+    )}
     {item.priority && <span class={`pill pill-priority p-${item.priority}`}>{item.priority}</span>}
     {item.industry && <span class="pill">{item.industry.replace(/-/g, ' ')}</span>}
     {
