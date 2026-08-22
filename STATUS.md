@@ -549,3 +549,32 @@ since this only needed to prove the shell logic and git plumbing, not another li
 
 YAML re-parsed to confirm structure; `npm run validate` and `npm test` (55/55) still pass
 untouched by this change, since it only touches CI wiring.
+
+---
+
+## 2026-08-22 - Verified the favicon commit-back fix against real GitHub, and a real incident
+
+The scratch-repo simulation proved the git logic; this pushed the fix itself and watched it run.
+
+**Immediately hit the exact hazard now documented in CLAUDE.md.** The fix's own commit message
+described the CI-skip mechanism in prose, and happened to spell the marker exactly - so GitHub's
+substring-matching skip detection fired on that description and silently skipped every workflow
+for the push. Nothing errored; there was just no run at all. Recovered with a manual
+`gh workflow run deploy.yml --ref main`, then documented the hazard in CLAUDE.md, deliberately not
+reproducing the exact marker there either.
+
+**Then ran the real end-to-end scenario the fix targets:** deleted a committed favicon
+(`site/public/favicons/links/tldr.ico`), pushed to main, and watched.
+
+| Step | Result |
+|---|---|
+| `Fetch favicons` | noticed the missing file, refetched it |
+| `Commit newly-cached favicons` | committed it as `github-actions[bot]`, pushed |
+| That bot push | **zero** workflow runs exist for it - confirmed by querying the Actions API directly, not inferred |
+| The commit itself | `chore(favicons): cache newly fetched icons`, one file, `tldr.ico`, restored |
+| Production | serves the restored file with a 200 immediately after |
+
+This is the exact case the fix exists for - an entry whose favicon was missing from the checkout
+- verified against the real remote and the real live site, not a simulation.
+
+`npm run validate` (15/15) and `npm test` (55/55) still pass.

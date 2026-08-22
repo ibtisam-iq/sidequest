@@ -200,10 +200,19 @@ on the same line of one shared file, guaranteeing merge conflicts between concur
   URL anywhere in the rendered page. Resolve the favicons directory from `process.cwd()` in Astro
   components, not `import.meta.url` - Astro/Vite rewrites a component's `import.meta.url` to a
   virtual module id, which makes `existsSync` silently find nothing even when the file is real.
-  `deploy.yml` commits any newly-fetched favicon back to `main` as `github-actions[bot]`, with
-  `[skip ci]` in the message so that push doesn't retrigger the same workflow - GitHub recognises
-  that marker natively for push-triggered runs. The step never blocks the deploy: it only affects
-  whether a future run has to refetch that one icon, not whether this run ships correctly.
+  `deploy.yml` commits any newly-fetched favicon back to `main` as `github-actions[bot]`, with a
+  CI-skip marker in the message so that push doesn't retrigger the same workflow - GitHub
+  recognises that marker natively for push-triggered runs. The step never blocks the deploy: it
+  only affects whether a future run has to refetch that one icon, not whether this run ships
+  correctly.
+
+  **Hazard, found the hard way:** that marker is a plain substring match against the whole commit
+  message, not just a leading tag. Writing your own commit describing this mechanism in prose -
+  even inside a sentence explaining what it does - trips the same detection and silently skips
+  every workflow for that push, with no error anywhere. It happened once while documenting this
+  exact feature: the commit landed, nothing ran, and it needed a manual `gh workflow run
+  deploy.yml` to recover. When writing about this feature, spell the marker with a space inside
+  the brackets, or describe it without reproducing it exactly.
 - **JSON Schema is the single source of truth.** `schema/*.json` is authoritative and is what
   `validate.mjs` enforces via ajv. The Astro zod schemas in `site/src/schemas/generated/` are
   **generated** from it by `scripts/gen-zod-schemas.mjs` (wired as `predev`/`prebuild`), are
