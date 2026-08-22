@@ -200,6 +200,10 @@ on the same line of one shared file, guaranteeing merge conflicts between concur
   URL anywhere in the rendered page. Resolve the favicons directory from `process.cwd()` in Astro
   components, not `import.meta.url` - Astro/Vite rewrites a component's `import.meta.url` to a
   virtual module id, which makes `existsSync` silently find nothing even when the file is real.
+  `deploy.yml` commits any newly-fetched favicon back to `main` as `github-actions[bot]`, with
+  `[skip ci]` in the message so that push doesn't retrigger the same workflow - GitHub recognises
+  that marker natively for push-triggered runs. The step never blocks the deploy: it only affects
+  whether a future run has to refetch that one icon, not whether this run ships correctly.
 - **JSON Schema is the single source of truth.** `schema/*.json` is authoritative and is what
   `validate.mjs` enforces via ajv. The Astro zod schemas in `site/src/schemas/generated/` are
   **generated** from it by `scripts/gen-zod-schemas.mjs` (wired as `predev`/`prebuild`), are
@@ -262,7 +266,7 @@ npm run preview          # serve the built site
 |---|---|---|
 | `validate.yml` | PR touching `data/**`, `taxonomy/**`, `schema/**` | Runs `node scripts/validate.mjs`. The PR gate. |
 | `issue-to-pr.yml` | Issue opened with label `new-link` / `new-company` | Parses the form → normalizes → duplicate-checks → writes YAML → validates → opens a PR. |
-| `deploy.yml` | Push to `main` | Validates **first** (fail = stop, no deploy) → Astro build + Pagefind → deploy to Pages. |
+| `deploy.yml` | Push to `main` | Validates **first** (fail = stop, no deploy) → fetches and commits any uncached favicons → Astro build + Pagefind → deploy to Pages. |
 
 All three shell out to the **same** `scripts/validate.mjs` a contributor runs locally, so CI and
 local can't drift.

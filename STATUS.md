@@ -505,3 +505,47 @@ either a bot commit-back step (the same shape of trade-off this project already 
 taxonomy entry counts, for the same reason: another moving part, another thing that can race) or
 teaching `issue-to-pr.yml` to fetch and commit the favicon as part of the PR diff. Neither was
 asked for here, so it's left as a follow-up rather than added unprompted.
+
+---
+
+## 2026-08-22 - Follow-up: closed the deploy.yml favicon commit gap
+
+The gap noted above is fixed. `deploy.yml` now commits any newly-fetched favicon back to the
+repository as part of the same run that fetched it, so an issue-form-only entry gets its icon
+persisted on the first deploy rather than refetched forever.
+
+**Why this is different from the taxonomy-count trade-off it was compared to.** Entry counts
+change on every single-entry PR, so a bot-commit-back step there would race constantly against
+the exact PRs that are landing. A favicon only needs writing **once** per entry, ever - after
+that first commit, every later run finds the file already cached and does nothing. The race
+surface is fundamentally smaller, which is what makes the bot commit worth it here and not there.
+
+**Built:** `permissions.contents` bumped from `read` to `write` (the only permission change - the
+job already had everything else it needed). A new step right after `Fetch favicons`: if
+`git status --porcelain` shows anything under `site/public/favicons`, commit it as
+`github-actions[bot]`, rebase onto the current `main` (in case something else landed while this
+job was running), and push.
+
+**Preventing the obvious infinite loop.** Pushing to `main` from inside a workflow that triggers
+on push to `main` would normally trigger itself again, which would push again, forever. The
+commit message carries `[skip ci]`, which GitHub recognises natively for push-triggered
+workflows: it skips starting a *new* run for that push, but does not affect the run already in
+progress, which continues on unaffected to build and deploy using the files it already fetched
+this run - whether or not the commit step even succeeds.
+
+**Never blocks the deploy.** The step has `continue-on-error: true`. If the push loses a race
+(something else touched `main` in the same few seconds), the build still proceeds with the
+correct favicons in its own working directory; the only cost of a failed push is that a future
+run refetches that one icon, which is exactly the pre-existing gap, not a new failure mode.
+
+**Verified by simulating all three paths in a scratch bare git repo** (not the real GitHub remote,
+since this only needed to prove the shell logic and git plumbing, not another live Actions run):
+
+| Scenario | Result |
+|---|---|
+| New favicon files present | committed as `github-actions[bot]` and pushed cleanly |
+| Nothing new (rerun) | `git status --porcelain` finds nothing, step logs and exits 0, no empty commit |
+| Remote diverged mid-run (a concurrent human push landed first) | `git pull --rebase` replayed the favicon commit on top cleanly, push succeeded, both changes present in history afterward |
+
+YAML re-parsed to confirm structure; `npm run validate` and `npm test` (55/55) still pass
+untouched by this change, since it only touches CI wiring.
