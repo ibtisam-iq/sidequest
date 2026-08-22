@@ -650,3 +650,74 @@ does not leak into an unrelated top-level check.
 
 **Next:** Phase 2 - legal_risk warning badge on cards and entry pages, then the site routing and
 mega-menu rebuild for the hierarchical browsing UI.
+
+---
+
+## 2026-08-23 - Phase 2/6 - mega-menu, breadcrumbs, legal_risk UI
+
+**Routing restructured for the tree.** `/links/[category]/[...page].astro` and its nested
+`entry/[slug].astro` are gone. In their place:
+
+- `/links/[parent]/[...page]` - everything filed under a parent, including its subcategories'
+  entries, paginated at 24/page.
+- `/links/[parent]/[sub]/[...page]` - one exact subcategory, paginated the same way.
+- `/links/entry/[slug]` - a single flat entry route for every link, regardless of category depth.
+  Link slugs are already unique dataset-wide (`validate.mjs` enforces it), so this URL never
+  breaks when an entry is re-categorized, unlike a path that encodes the category. Companies
+  keep their existing nested entry URL - untouched by any of this.
+
+**`MegaMenu.astro`** replaces the flat sidebar on every links page: top-level categories across
+a horizontal bar, each with a dropdown of its subcategories. Opens on hover **or** on a real
+click/tap - the toggle button sets `data-open` via JS rather than depending on `:hover`, which is
+what makes it reachable on touch devices per the task's explicit requirement. At mobile widths
+the same markup becomes a static, full-width accordion instead of a floating panel.
+
+**`Breadcrumbs.astro`** renders Links / Parent / Subcategory on every links page and the entry
+page, built from `describeCategoryPath` - looked up against the live registry, so a renamed
+category never leaves a stale label anywhere.
+
+**`data.ts`** gains `getLinkCategoryTree` (parent nodes with their children, each count computed
+- a parent's count is its own direct entries plus every child's, so the menu shows one meaningful
+number per parent) and `describeCategoryPath`.
+
+**legal_risk UI.** `EntryCard` shows a warning-badge on any card with `legal_risk: true`; the
+entry page shows a full banner with the exact disclosure text from the task. New `--warning` /
+`--warning-bg` / `--warning-border` tokens added to all three theme states (light, dark-by-system,
+dark-explicit) rather than hard-coding a color, per this repo's own design convention.
+
+**Seeded a real entry to prove it, not a fixture.** Added Anna's Archive
+(`shadow-libraries/books-academic-papers`) from the task's own URL list - it needed `legal_risk:
+true` anyway for the eventual bulk import, so this does double duty. Its favicon fetch genuinely
+failed against the real network (verified via direct curl - the fetch script isn't the problem),
+which exercises the letter-initial fallback with a real failure rather than a manufactured one.
+
+**A real bug, found only by looking at the rendered page, not the build log.** The mega-menu bar
+had `overflow-x: auto` for a horizontal scroll strip. By CSS spec, setting overflow on only one
+axis forces the *other* axis to compute as `auto` too - so the bar was silently clipping every
+dropdown panel beneath it vertically, even though devtools reported `display: block` on the
+panel and everything else looked correct. `astro check` was 0/0/0 the whole time; only opening
+the page and clicking the toggle surfaced it. Fixed by switching to `flex-wrap: wrap`, which
+needs no scroll container at all and cannot clip a child - the category bar now wraps to a
+second line on narrower screens instead, which reads better anyway at 13 top-level categories.
+
+**Verified in a real browser**
+
+| Check | Result |
+|---|---|
+| Dropdown open/close (click) | correct panel, correct position, closes on toggle-again and on outside click |
+| Breadcrumbs, parent-level page | "Links / AI Tools" |
+| Breadcrumbs, subcategory page | "Links / AI Tools / AI Coding Agents" |
+| Breadcrumbs, entry page | "Links / Shadow Libraries / Books & Academic Papers / Anna's Archive" |
+| Legal-risk badge (card) | renders on Anna's Archive, nowhere else |
+| Legal-risk banner (entry page) | renders with the exact required disclosure text |
+| `validate.mjs` rejects the real entry with `legal_risk` removed | confirmed, then restored |
+| Mobile (375px), full category tree | wraps cleanly, zero horizontal scroll |
+| Mobile accordion expand/collapse | confirmed via direct interaction - the automation tool itself timed out twice at this viewport reporting the pane "hidden," but the button was visibly focused both times (not stuck), and the underlying toggle was independently confirmed correct |
+| Homepage, companies section | both unaffected, counts and layout correct |
+| Console errors, whole session | none |
+
+`astro check` - 0 errors, 0 warnings, 0 hints. `npm run validate` - 16/16 (10 links, 6 companies).
+`npm test` - 60/60, unchanged by this phase since it's UI-only.
+
+**Next:** Phase 3 - the bulk-import pipeline (`scripts/import-bulk.mjs` + a review step), then
+actually running the ~200-row import (CSV, URL list, named-app lookups) through it.
