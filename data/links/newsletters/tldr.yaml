@@ -1,0 +1,14 @@
+url: https://tldr.tech
+title: TLDR
+category: newsletters
+description: A daily newsletter summarizing tech, startup, and engineering news in a few minutes of reading.
+tags:
+  - newsletter
+  - tech-news
+  - daily
+priority: low
+audience:
+  - developers
+  - everyone
+date_added: "2026-03-21"
+source: local

@@ -1,0 +1,14 @@
+url: https://www.warp.dev
+title: Warp
+category: dev-tools
+description: A modern terminal with editor-style input, blocks, and AI command suggestions.
+tags:
+  - terminal
+  - cli
+  - productivity
+priority: high
+audience:
+  - developers
+date_added: "2026-06-10"
+source: local
+note: Block-based output makes scrollback far easier to scan than a plain terminal.

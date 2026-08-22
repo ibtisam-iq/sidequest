@@ -49,3 +49,54 @@ Read `CLAUDE.md` first for working context, then this file for current state.
 **Next:** Phase 2 — `schema/link.schema.json`, `schema/company.schema.json`,
 `taxonomy/categories.yaml` seeded with 10 real link categories + `pakistan`, and 8–10 real seed
 entries including a mutually-linked `alternatives` pair to prove the schemas out.
+
+---
+
+## 2026-08-22 — Phases 2 & 3/10 (~30%) — Schemas, taxonomy, seed data, validation
+
+**Phase 2 — schemas, taxonomy, seed data**
+
+- `schema/link.schema.json` and `schema/company.schema.json`, draft-07, `additionalProperties:
+  false`, `format: date`/`format: uri` plus explicit regex patterns (JSON Schema `format` is
+  advisory in some validators, so the patterns do the real enforcement).
+- `taxonomy/categories.yaml` seeded with 10 link categories (`dev-tools`, `ai-tools`,
+  `github-repos`, `articles`, `books`, `courses`, `communities`, `remote-job-boards`,
+  `referral-links`, `newsletters`) + `pakistan` for companies. Header comment documents the
+  open-registry rules and why counts are not stored.
+- **12 real seed entries** — 9 links, 3 Pakistani companies (Systems Limited, Arbisoft, NetSol).
+
+**Alternatives are seeded asymmetrically on purpose.** `ghostty` declares `alternatives: [warp]`;
+`warp` declares nothing. So Warp's page showing Ghostty is only possible via the computed reverse
+map — that asymmetry is what makes the bidirectional feature genuinely testable instead of
+trivially satisfied. Same setup for `cursor` → `claude-code` and `we-work-remotely` → `remoteok`.
+
+**Phase 3 — shared libs + validation**
+
+- `scripts/lib/url.mjs` — canonical URL form: forces https, strips `www.`, drops fragments,
+  removes ~20 tracking params, sorts query params, trims trailing slash (except bare origins).
+- `scripts/lib/slugify.mjs` — output is strictly `[a-z0-9-]`; accents folded, `&`/`+` spelled out.
+  This is the filename-safety guarantee for the issue workflow.
+- `scripts/lib/levenshtein.mjs` — hand-rolled, zero deps. Near-match fires at distance ≤2 **or**
+  ratio <0.3; the proportional arm catches typos in long slugs that a flat distance rule misses.
+- `scripts/lib/taxonomy.mjs`, `scripts/lib/yaml-io.mjs`, and the two thin CLI wrappers.
+- `scripts/validate.mjs` with `--report` and `--check-duplicate-url` (exit 2 = duplicate).
+
+**Verified by deliberately breaking things** — every case caught with a clear message, then reverted:
+
+| Broken input | Result |
+|---|---|
+| Bad `priority` enum + missing `tags` | both errors reported |
+| `https://www.warp.dev/?utm_source=…` vs existing `warp` | caught — normalized to the same URL |
+| `alternatives: [does-not-exist]` | caught |
+| Unregistered category | caught, with the fix suggested |
+| Same slug twice within `data/links/` | caught |
+| Same slug in links *and* companies | **correctly allowed** (per-collection scoping) |
+
+- Fuzzy match confirmed firing on the real registry: `"AI Tool"` → *"did you mean: ai-tools?"*,
+  `"Remote Job Bords!!"` → *"did you mean: remote-job-boards?"*, `"Podcasts"` → genuinely new.
+- `npm test` — 28 unit tests passing over the pure lib functions.
+- Fixed `npm test` to glob `scripts/lib/*.test.mjs`; a bare directory arg made Node treat the
+  path as a single module and fail to load.
+
+**Next:** Phase 4 — `add-link.mjs` / `add-company.mjs` interactive CLIs with `@clack/prompts`,
+wired to the same fuzzy-match check.
