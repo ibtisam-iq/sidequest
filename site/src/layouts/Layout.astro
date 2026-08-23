@@ -26,10 +26,17 @@ const path = Astro.url.pathname;
 // from the URL alone rather than every page having to pass that down explicitly.
 const [tree, data] = await Promise.all([getLinkCategoryTree(), getData()]);
 
-const linksMatch = path.match(/^\/links\/([^/]+)(?:\/([^/]+))?/);
+// The six root slugs are the only valid first path segment for a category page (companies,
+// search, browse, entry, etc. all live at other top-level paths and never collide with one).
+const ROOT_SLUGS = new Set(tree.map((c) => c.slug));
 const onCompanies = path.startsWith('/career/companies');
-const currentParent = onCompanies ? 'career' : (linksMatch?.[1] ?? null);
-const currentSub = onCompanies ? null : (linksMatch?.[2] ?? null);
+const categoryMatch = path.match(/^\/([^/]+)(?:\/([^/]+))?/);
+const currentParent = onCompanies
+  ? 'career'
+  : categoryMatch && ROOT_SLUGS.has(categoryMatch[1])
+    ? categoryMatch[1]
+    : null;
+const currentSub = onCompanies || !currentParent ? null : (categoryMatch?.[2] ?? null);
 ---
 
 <!doctype html>

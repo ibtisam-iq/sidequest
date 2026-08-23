@@ -12,18 +12,30 @@ export type CategoryEntry = CollectionEntry<'categories'>;
  * how many pages ask for it - that is what keeps build time flat as the dataset grows into the
  * thousands, rather than every category page re-scanning the whole set.
  *
- * Links are a two-level tree (top-level category, optionally a subcategory); companies stay a
- * flat list of countries, entirely unaffected by any of this.
+ * Links are an arbitrary-depth tree below one of six fixed roots; companies stay a flat list of
+ * countries, entirely unaffected by any of this.
  */
 
 let cache: Promise<Data> | null = null;
 
 export interface CategoryNode {
+  /** Full path from the root, e.g. "technology" or "technology/dev-tools/kubernetes". */
+  path: string;
   slug: string;
   name: string;
-  /** This category's own direct entries, plus (for a top-level node) every child's too. */
+  /** This category's own direct entries, plus every descendant's too. */
   count: number;
+  /** True if this category has any registered subcategories - drives "show children as a grid". */
+  hasChildren: boolean;
   children: CategoryNode[];
+}
+
+/** One segment of a resolved category path, root first. */
+export interface CategoryCrumb {
+  slug: string;
+  name: string;
+  /** Full path up to and including this segment. */
+  path: string;
 }
 
 interface Data {
@@ -32,7 +44,7 @@ interface Data {
   categories: CategoryEntry[];
   linkCategories: CategoryEntry[];
   countries: CategoryEntry[];
-  /** Full category path ("parent" or "parent/sub") -> its entries. */
+  /** Full category path (any depth) -> its DIRECT entries only, not descendants'. */
   linksByCategoryPath: Map<string, LinkEntry[]>;
   companiesByCountry: Map<string, CompanyEntry[]>;
   /** slug -> related link slugs, forward refs unioned with reverse refs. */
@@ -111,62 +123,81 @@ export function getData(): Promise<Data> {
   return cache;
 }
 
-/**
- * Splits a category path ("parent" or "parent/sub") into its display names, looked up against
- * the registry so a renamed category never shows a stale label.
- */
-export async function describeCategoryPath(categoryPath: string) {
-  const data = await getData();
-  const [parentSlug, subSlug] = categoryPath.split('/');
-  const parent = data.linkCategories.find((c) => c.data.slug === parentSlug && !c.data.parent);
-  const sub = subSlug
-    ? data.linkCategories.find((c) => c.data.slug === subSlug && c.data.parent === parentSlug)
-    : undefined;
-
-  return {
-    parentSlug,
-    parentName: parent?.data.name ?? parentSlug,
-    subSlug: sub?.data.slug,
-    subName: sub?.data.name,
-  };
+/** Every entry directly under `path`, plus every entry under any descendant of it. */
+function countUnder(data: Data, categoryPath: string): number {
+  let n = data.linksByCategoryPath.get(categoryPath)?.length ?? 0;
+  const prefix = `${categoryPath}/`;
+  for (const [key, entries] of data.linksByCategoryPath) {
+    if (key.startsWith(prefix)) n += entries.length;
+  }
+  return n;
 }
 
 /**
- * The full links category tree with computed counts - never stored, always derived from the
- * current dataset. A top-level node's count includes every entry filed under any of its
- * children, so the mega-menu and homepage can show one meaningful number per parent.
+ * Resolves a category PATH ("root", "root/sub", "root/sub/sub", ...) into its full breadcrumb
+ * chain, root first, looked up against the registry so a renamed category never shows a stale
+ * label. Depth is unbounded - this is what lets a leaf entry page or a deeply nested category
+ * page render a breadcrumb of any length.
  */
-export async function getLinkCategoryTree(): Promise<CategoryNode[]> {
+export async function describeCategoryPath(categoryPath: string): Promise<CategoryCrumb[]> {
   const data = await getData();
-  const countFor = (path: string) => data.linksByCategoryPath.get(path)?.length ?? 0;
+  const segments = categoryPath.split('/');
+  const chain: CategoryCrumb[] = [];
+  let parentPath: string | undefined;
 
-  const topLevel = data.linkCategories.filter((c) => !c.data.parent);
+  for (const slug of segments) {
+    const match = data.linkCategories.find(
+      (c) => c.data.slug === slug && (parentPath ? c.data.parent === parentPath : !c.data.parent),
+    );
+    parentPath = parentPath ? `${parentPath}/${slug}` : slug;
+    chain.push({ slug, name: match?.data.name ?? slug, path: parentPath });
+  }
 
-  return topLevel
-    .map((parent) => {
-      const children = data.linkCategories
-        .filter((c) => c.data.parent === parent.data.slug)
-        .map((child) => ({
-          slug: child.data.slug,
-          name: child.data.name,
-          count: countFor(`${parent.data.slug}/${child.data.slug}`),
-          children: [] as CategoryNode[],
-        }));
+  return chain;
+}
 
-      const ownCount = countFor(parent.data.slug);
-      const childCount = children.reduce((sum, c) => sum + c.count, 0);
+/** The registered direct children of one category (or the six roots, for `parentPath` null), with computed counts. */
+export async function getCategoryChildren(parentPath: string | null): Promise<CategoryNode[]> {
+  const data = await getData();
 
+  const directChildren = data.linkCategories.filter((c) =>
+    parentPath ? c.data.parent === parentPath : !c.data.parent,
+  );
+
+  return directChildren
+    .map((child) => {
+      const path = parentPath ? `${parentPath}/${child.data.slug}` : child.data.slug;
+      const hasChildren = data.linkCategories.some((c) => c.data.parent === path);
       return {
-        slug: parent.data.slug,
-        name: parent.data.name,
-        count: ownCount + childCount,
-        children: children.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+        path,
+        slug: child.data.slug,
+        name: child.data.name,
+        count: countUnder(data, path),
+        hasChildren,
+        children: [] as CategoryNode[],
       };
     })
-    // The six roots are fixed, durable life-domain categories, not a ranked list - they always
-    // show alphabetically, never reordered by count. (Subcategories within a root still rank by
-    // count above - that tier is genuinely open-ended, so surfacing the fullest ones first helps.)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+/**
+ * The top-level links tree, two levels deep (root, and each root's immediate children) with
+ * computed counts - never stored, always derived from the current dataset. This is exactly what
+ * the mega-menu needs: it only ever shows a root's immediate children on hover/tap, regardless of
+ * how much deeper the real tree goes underneath - deeper levels are reached by clicking into a
+ * category page and browsing further, not by cascading flyouts.
+ */
+export async function getLinkCategoryTree(): Promise<CategoryNode[]> {
+  const roots = await getCategoryChildren(null);
+
+  const withChildren = await Promise.all(
+    roots.map(async (root) => ({ ...root, children: await getCategoryChildren(root.path) })),
+  );
+
+  // The six roots are fixed, durable life-domain categories, not a ranked list - they always
+  // show alphabetically, never reordered by count. (Their children still rank by count above -
+  // that tier is genuinely open-ended, so surfacing the fullest ones first helps.)
+  return withChildren.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Companies stay flat - unchanged shape, just filtered to top-level (always true for them). */
@@ -199,13 +230,12 @@ export interface CardItem {
   href: string;
   url: string;
   description?: string;
-  /** Full category path for a link ("parent" or "parent/sub"); bare country slug for a company. */
+  /** Full category path (any depth) for a link; bare country slug for a company. */
   group: string;
+  /** The leaf category/country display name. */
   groupName: string;
-  parentSlug: string;
-  parentName: string;
-  subSlug?: string;
-  subName?: string;
+  /** Full breadcrumb chain root-first, links only - undefined for a company. */
+  categoryChain?: CategoryCrumb[];
   tags: string[];
   priority?: string;
   audience?: string[];
@@ -223,25 +253,20 @@ export async function getCardItems(): Promise<CardItem[]> {
 
   const links: CardItem[] = await Promise.all(
     data.links.map(async (l): Promise<CardItem> => {
-      const { parentSlug, parentName, subSlug, subName } = await describeCategoryPath(
-        l.data.category,
-      );
+      const categoryChain = await describeCategoryPath(l.data.category);
       return {
         type: 'link',
         slug: l.id,
         title: l.data.title,
         // Entry URLs no longer nest under a category: link slugs are already unique dataset-
-        // wide (validate.mjs enforces it), and a flat /links/entry/<slug> URL never breaks when
-        // an entry is re-categorized, unlike one that encodes the category path.
-        href: `/links/entry/${l.id}`,
+        // wide (validate.mjs enforces it), and a flat /entry/<slug> URL never breaks when an
+        // entry is re-categorized, unlike one that encodes the category path.
+        href: `/entry/${l.id}`,
         url: l.data.url,
         description: l.data.description,
         group: l.data.category,
-        groupName: subName ?? parentName,
-        parentSlug,
-        parentName,
-        subSlug,
-        subName,
+        groupName: categoryChain.at(-1)!.name,
+        categoryChain,
         tags: l.data.tags,
         priority: l.data.priority,
         audience: l.data.audience,
@@ -264,8 +289,6 @@ export async function getCardItems(): Promise<CardItem[]> {
     description: c.data.rating,
     group: c.data.country,
     groupName: countryName(c.data.country),
-    parentSlug: c.data.country,
-    parentName: countryName(c.data.country),
     tags: c.data.tags ?? [],
     industry: c.data.industry,
     hiring_status: c.data.hiring_status,

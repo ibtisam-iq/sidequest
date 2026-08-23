@@ -38,10 +38,10 @@ export function isValidSlug(value) {
 }
 
 /**
- * Slugifies a category PATH ("parent" or "parent/sub") segment by segment, preserving the "/" -
- * plain slugify() would flatten "ai-tools/ai-coding-agents" into one wrong slug, since a "/" is
- * just another non-[a-z0-9] character to it. Returns '' if either segment is empty after
- * normalizing, or if there are more than two segments (only two levels are supported).
+ * Slugifies a category PATH ("root", "root/sub", "root/sub/sub", ...) segment by segment,
+ * preserving the "/" - plain slugify() would flatten "technology/ai-coding-agents" into one
+ * wrong slug, since a "/" is just another non-[a-z0-9] character to it. Depth is unbounded.
+ * Returns '' if any segment is empty after normalizing (including an empty path).
  */
 export function slugifyCategoryPath(input) {
   if (typeof input !== 'string') return '';
@@ -51,7 +51,7 @@ export function slugifyCategoryPath(input) {
     .map((s) => slugify(s))
     .filter((s) => s !== '');
 
-  if (segments.length === 0 || segments.length > 2) return '';
+  if (segments.length === 0) return '';
   if (segments.length !== input.split('/').length) return ''; // an empty segment was dropped
 
   return segments.join('/');

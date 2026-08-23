@@ -14,21 +14,22 @@ to read, fork, and reuse.
 
 Two entity types, with separate schemas:
 
-- **Links** (`data/links/<root>[/<sub>]/<slug>.yaml`) - any saved resource, filed under one of
-  six fixed life-domain roots (Career, Faith, Finance, Learning, Lifestyle, Technology), each
-  with open subcategories. Required fields: url, title, category (a `root` or `root/sub` path),
-  tags, priority (high|medium|low), date_added, source. Optional: note, description, added_by,
-  alternatives, audience, legal_risk (required true under three specific categories that carry a
-  legal-risk disclosure: learning/books-academic-papers, lifestyle/movies-torrents,
-  technology/cracked-software-apks).
-- **Companies** (`data/companies/<country>/<slug>.yaml`) - tech companies worth knowing about,
-  surfaced on the site as a feature of Career rather than a separate top-level section. Required:
-  name, website, country, industry, date_added, source. Optional: careers_url, hiring_status,
-  size, rating, tags, remote_policy.
+- **Links** (`data/<root>[/<sub>/<sub>/...]/<slug>.yaml`) - any saved resource, filed under one
+  of six fixed life-domain roots (Career, Faith, Finance, Learning, Lifestyle, Technology), each
+  with open subcategories to unbounded depth. Required fields: url, title, category (a `root`,
+  `root/sub`, or deeper path), tags, priority (high|medium|low), date_added, source. Optional:
+  note, description, added_by, alternatives, audience, legal_risk (required true under three
+  specific categories that carry a legal-risk disclosure: learning/books-academic-papers,
+  lifestyle/movies-torrents, technology/cracked-software-apks). A category page's URL is its
+  category path with no prefix, e.g. `/technology/ai-coding-agents`.
+- **Companies** (`data/career/companies/<country>/<slug>.yaml`) - tech companies worth knowing
+  about, nested inside the Career root on disk and surfaced on the site as a feature of Career
+  rather than a separate top-level section. Required: name, website, country, industry,
+  date_added, source. Optional: careers_url, hiring_status, size, rating, tags, remote_policy.
 
 Subcategories live in an open registry (`taxonomy/categories.yaml`) rather than a fixed enum, so
-they grow with the directory - but the six top-level roots themselves are fixed. Tags are
-free-form. Entry counts are computed, never stored.
+they grow with the directory to any depth - but the six top-level roots themselves are fixed.
+Tags are free-form. Entry counts are computed, never stored.
 
 The `alternatives` field is declared one-way but presented both ways: if entry A lists B as an
 alternative, B's page also shows A.
@@ -42,10 +43,13 @@ alternative, B's page also shows A.
 ## Key pages
 
 - https://sidequest.ibtisam-iq.com/ - overview, the six category roots, recent and top entries
-- https://sidequest.ibtisam-iq.com/links - all links, filterable by category, priority, audience, tag
+- https://sidequest.ibtisam-iq.com/browse - all links, filterable by priority, audience, tag
 - https://sidequest.ibtisam-iq.com/career/companies - company directory, filterable by country,
   industry, hiring status, remote policy and size
 - https://sidequest.ibtisam-iq.com/search - full-text search
+
+Every category is also its own page at its category path, e.g.
+https://sidequest.ibtisam-iq.com/technology/ai-coding-agents.
 
 ## License
 

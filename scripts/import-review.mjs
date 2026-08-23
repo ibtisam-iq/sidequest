@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Walks import/review.yaml (written by scripts/import-bulk.mjs) and promotes approved entries
- * into data/links/** - this is the only script that actually writes to the dataset from an
+ * into data/** - this is the only script that actually writes to the dataset from an
  * import; import-bulk.mjs only ever drafts proposals.
  *
  * Two modes:

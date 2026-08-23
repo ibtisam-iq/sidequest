@@ -121,4 +121,4 @@ const entry = {
   source: 'local',
 };
 
-await writeAndValidate(filePath, entry);
+await writeAndValidate('companies', filePath, entry);

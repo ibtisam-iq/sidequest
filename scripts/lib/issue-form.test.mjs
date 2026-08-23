@@ -133,11 +133,12 @@ test('legal_risk is omitted entirely outside the categories that require it', ()
   assert.ok(!('legal_risk' in entry));
 });
 
-test('a three-segment category is rejected rather than silently truncated', () => {
+test('a three-segment category is accepted, not truncated - depth is unbounded', () => {
   const body =
     '### URL\n\nhttps://a.com\n\n### Title\n\nA\n\n### Category\n\na/b/c\n\n### Tags\n\nt\n';
-  const { errors } = parseSubmission('links', body, { today: TODAY });
-  assert.ok(errors.some((e) => e.includes('Category')));
+  const { entry, errors } = parseSubmission('links', body, { today: TODAY });
+  assert.deepEqual(errors, []);
+  assert.equal(entry.category, 'a/b/c');
 });
 
 const companyBody = `### Company name

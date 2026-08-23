@@ -1085,3 +1085,130 @@ coverage), `npm run validate` 218/218, `astro check` 0/0/0, site builds to 274 p
 than before: the three relocated `/career/companies/**` routes plus its country listing).
 
 This closes out the six-root taxonomy restructuring.
+
+## Follow-up correction: the taxonomy/routing layer wasn't actually finished
+
+The previous entry closed out the six-root restructuring, but a fresh browser test against the
+live build found three things the restructuring was supposed to deliver but hadn't: `data/links/`
+and `data/companies/` were still the real folder structure, category URLs still carried a
+`/links/` segment, and the taxonomy was hard-capped at two levels even though "arbitrary depth"
+was the stated intent. Fixed together in one pass since all three share the same root cause - the
+taxonomy/routing layer was left half-migrated.
+
+### 1. Purged `links`/`companies` as top-level concepts
+
+- `data/` now has exactly six top-level folders (`career`, `faith`, `finance`, `learning`,
+  `lifestyle`, `technology`) - no `data/links/` wrapper. Companies moved to
+  `data/career/companies/<country>/<slug>.yaml`, nested under Career on disk to match where the
+  site already surfaced them, not a sibling top-level folder. Moved with `git mv` (215 files),
+  tracked as renames.
+- `scripts/lib/yaml-io.mjs`: `PATHS.data` replaces `PATHS.links`; added `folderFor(kind,
+  categoryPath)` as the one place that turns a category/country path into a real folder path.
+  `loadCollection()` now walks `PATHS.data` once and splits the result by whether a file falls
+  under the companies subtree, rather than walking two separate collection roots.
+- `site/src/content.config.ts`: the links loader globs `data/` with a negated pattern
+  (`['**/*.yaml', '!career/companies/**']` - confirmed Astro's glob loader passes `!`-prefixed
+  patterns through to `tinyglobby` as ignore rules) instead of a dedicated `data/links/` base; the
+  companies loader points at `data/career/companies/`.
+- URLs dropped the `/links` segment entirely. A category page is now `/technology/cli-terminal`,
+  not `/links/technology/cli-terminal`; the old fixed-depth routes
+  (`links/[parent]/[...page].astro`, `links/[parent]/[sub]/[...page].astro`) are gone, replaced by
+  one arbitrary-depth catch-all (see below). The "browse everything" page moved from `/links` to
+  `/browse` (`/links` isn't a valid URL concept anymore, so it couldn't stay there). Entry pages
+  moved from `/links/entry/<slug>` to `/entry/<slug>`. `career/companies/**` breadcrumbs still had
+  a leftover `/links/career` href from the previous phase - fixed to `/career`.
+- Swept every script, workflow, and page for a literal `data/links`, `data/companies`, or `/links`
+  reference (comments included, not just executable paths) and fixed each one:
+  `add-link.mjs`/`add-company.mjs`/`import-review.mjs` now pass their collection kind explicitly
+  to `writeAndValidate`/`resolveEntryPath` rather than reading it back out of the file path (which
+  no longer has a `links`/`companies` segment to read), `parse-issue-form.mjs`'s output path is
+  built from `folderFor()`, and `EntryCard.astro`/`index.astro`/`404.astro`/`search.astro`/
+  `llms.txt` all point at the new paths.
+
+### 2. Unlimited category depth, not just two levels
+
+The data model (`taxonomy/categories.yaml`'s `parent` field) already looked like it supported
+arbitrary depth, but three things were written assuming exactly two: `validate.mjs`'s category
+resolver, the JSON Schema's `category` pattern (capped at one `/`), and every routing/breadcrumb
+component.
+
+- **The real fix, structural, not just a cap removal:** `parent` now stores the FULL PATH of the
+  immediate parent, not just its bare slug (e.g. `technology/dev-tools`, not `dev-tools`). This is
+  what makes depth genuinely unbounded without ambiguity - two categories in different branches
+  can now safely share a slug (a `documentation` subcategory could exist under two unrelated
+  parents) because each is identified by its distinct full path, not by slug alone. For a
+  root-level subcategory this is identical to the old bare-slug value, so every existing two-level
+  category needed zero changes.
+- `scripts/lib/taxonomy.mjs`: `resolveCategoryPath()` rewritten to walk an arbitrary number of
+  segments, returning the full matched `chain` (root to leaf) instead of a hardcoded
+  `{parent, sub}` pair; `childrenOf()` takes a full parent path; `addCategory()` builds its target
+  folder via `folderFor()` against the full path rather than joining at most one parent segment.
+- `scripts/lib/slugify.mjs`: `slugifyCategoryPath()` no longer rejects more than two segments.
+- `schema/link.schema.json`: `category`'s pattern previously capped at one optional `/sub` segment
+  after the root; rewritten to accept any number of `/`-separated segments.
+- `site/src/content.config.ts`: the categories collection's synthetic `id` changed from
+  `type:slug` to `type:fullpath` - with the old bare-slug id, two categories at different depths
+  sharing a slug would have silently collided in Astro's content store.
+- `site/src/lib/data.ts`: `describeCategoryPath()` now returns the full root-to-leaf breadcrumb
+  chain (not just a `{parentName, subName}` pair); added `getCategoryChildren(parentPath)` for
+  "does this category have children, and what are they" at any depth; `getLinkCategoryTree()`
+  (used only by the mega-menu) still deliberately stops at two levels - the mega-menu was already
+  correct to only show a root's immediate children on hover/tap, that behavior didn't change.
+- **New routing model:** `site/src/pages/[...path].astro` is one catch-all route for every
+  registered link category at any depth, replacing the two fixed-depth route files. A category
+  page shows its own direct entries (paginated, hand-rolled pagination synthesized into an
+  Astro-`Page`-shaped object since `paginate()` doesn't compose with a variable-depth rest param)
+  and, if it has any, its children as a clickable tile grid above them - a leaf category shows
+  entries only, a category with children shows both. `site/src/pages/entry/[slug].astro` renders
+  the same full breadcrumb chain.
+- **Verified with a real throwaway test, not just code review:** added a temporary 4-level chain
+  (`technology/dev-tools/kubernetes`, then `technology/dev-tools/kubernetes/documentation`) with
+  two real entries, confirmed in the browser that the URL, the breadcrumb (`Technology / Dev Tools
+  / Kubernetes / Documentation`), and the parent/child grid all rendered correctly at that depth,
+  then deleted the test category and entries and re-ran `npm run validate` to confirm it returned
+  to exactly 218/218.
+
+### 3. Cleaned up leftover near-duplicate categories from the bulk import
+
+Audited all 47 subcategories for the "restates its own root's name, holds only a stray few
+entries" pattern that signals a bulk-import leftover bucket rather than a real distinct category.
+Found and fixed two (everything else checked out as either a real narrow category or one of the
+already-documented intentional generic catch-alls like `technology/dev-tools` / `technology/
+ai-tools`):
+
+- `finance/fintech-payments` (2 entries: Stripe, forex.com.pk) restated "Finance" and didn't
+  describe what actually distinguished it from the other three Finance subcategories. Renamed to
+  `finance/payment-processing-exchange-rates` ("Payment Processing & Exchange Rates") rather than
+  forcing both entries into an ill-fitting sibling - Stripe is payment infrastructure, forex.com.pk
+  is a currency-exchange-rate reference, and neither is really "remittance," "crypto," or a
+  "Pakistan payment app."
+- `career/career-research` had zero entries and no data folder - a pure registry leftover,
+  redundant with the already-populated `career/business-research` (14 entries) covering the same
+  ground. Removed from the registry entirely rather than kept as a second empty near-duplicate.
+
+### Verification
+
+Real browser, desktop and mobile (375px), both themes:
+
+- Confirmed zero `/links` or `/companies` segments in any URL or breadcrumb, sitewide.
+- `/technology` (a root with children, zero direct entries) renders the 13-subcategory tile grid
+  correctly; `/technology/cli-terminal` (a leaf) renders its 2 entries with the
+  `Technology / CLI & Terminal` breadcrumb.
+- `/entry/ghostty` renders the full category breadcrumb and the bidirectional alternatives
+  relationship (Warp links to Ghostty in one direction only in the YAML; both pages show the
+  other).
+- `/career/companies` still renders exactly as before (country/industry/hiring/remote/size
+  facets, Recent/Hiring-first toggle) and its `View YAML` link and breadcrumb both point at the
+  new `data/career/companies/...` path.
+- Mega-menu: desktop hover and mobile tap-to-expand both verified via direct DOM/JS inspection
+  (not just screenshots, which have a known capture artifact on this sticky/blurred header noted
+  in the previous entry) - Career's panel shows Companies first with a divider, then its four real
+  subcategories.
+- `/finance/payment-processing-exchange-rates` resolves correctly and lists both migrated entries.
+- Dark mode toggled correctly with no console errors across every page visited.
+- `npm test` 86/86 (2 tests updated to assert unbounded depth instead of a two-segment cap - both
+  failed first against the old assertion, confirming they were exercising the real change, not
+  rewritten to vacuously pass), `npm run validate` 218/218, `astro check` 0/0/0, site builds to
+  273 pages.
+
+This closes out the taxonomy/routing follow-up correction.

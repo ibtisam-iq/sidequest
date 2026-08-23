@@ -99,13 +99,13 @@ const jsonLd = {
         <h2>Browse by category</h2>
         <p class="muted">Six life domains, always in this order - not ranked by size.</p>
       </div>
-      <a class="more" href="/links">All links →</a>
+      <a class="more" href="/browse">All links →</a>
     </div>
 
     <div class="domain-grid">
       {
         linkTree.map((category) => (
-          <a class="domain" href={`/links/${category.slug}`}>
+          <a class="domain" href={`/${category.path}`}>
             <div class="domain-top">
               <span class="domain-name">{category.name}</span>
               <span class="cat-count">{category.count}</span>
@@ -165,7 +165,7 @@ const jsonLd = {
         <h2>Recently added</h2>
         <p class="muted">The newest arrivals across the whole directory.</p>
       </div>
-      <a class="more" href="/links">Browse all →</a>
+      <a class="more" href="/browse">Browse all →</a>
     </div>
     <div class="grid">
       {recent.map((item) => <EntryCard item={item} />)}

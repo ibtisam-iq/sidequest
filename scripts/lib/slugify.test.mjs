@@ -44,8 +44,9 @@ test('slugifyCategoryPath slugifies each segment and keeps the separator', () =>
   assert.equal(slugifyCategoryPath('dev-tools'), 'dev-tools');
 });
 
-test('slugifyCategoryPath rejects more than two segments', () => {
-  assert.equal(slugifyCategoryPath('a/b/c'), '');
+test('slugifyCategoryPath supports arbitrary depth, not just two segments', () => {
+  assert.equal(slugifyCategoryPath('a/b/c'), 'a/b/c');
+  assert.equal(slugifyCategoryPath('Technology/Dev Tools/Kubernetes/Docs'), 'technology/dev-tools/kubernetes/docs');
 });
 
 test('slugifyCategoryPath rejects a segment that normalizes to nothing', () => {

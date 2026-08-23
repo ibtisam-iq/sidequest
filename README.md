@@ -10,7 +10,7 @@ exhaustive. Never LinkedIn, YouTube, Google, or anything a typical person in the
 already know about.
 
 [**sidequest.ibtisam-iq.com**](https://sidequest.ibtisam-iq.com) ·
-[Browse links](https://sidequest.ibtisam-iq.com/links) ·
+[Browse links](https://sidequest.ibtisam-iq.com/browse) ·
 [Companies](https://sidequest.ibtisam-iq.com/career/companies) ·
 [Add an entry](https://github.com/ibtisam-iq/sidequest/issues/new/choose)
 
@@ -43,15 +43,17 @@ disappears tomorrow, the data is still a folder of readable text files you can g
 import somewhere else.
 
 Links are organized under **six fixed life-domain roots** - Career, Faith, Finance, Learning,
-Lifestyle, Technology - always shown alphabetically, each with open subcategories underneath.
-Companies are a feature of Career (`/career/companies`), not a separate top-level section.
+Lifestyle, Technology - always shown alphabetically, each with open subcategories underneath, to
+any depth. A category page's URL is its category path with no prefix, e.g.
+`/technology/ai-coding-agents`. Companies are a feature of Career (`/career/companies`), not a
+separate top-level section, and live nested under it on disk too.
 
 ## Two kinds of entry
 
 **Links** - anything worth saving: a tool, a repo, an article, a course, a community, a job board.
 
 ```yaml
-# data/links/technology/cli-terminal/ghostty.yaml
+# data/technology/cli-terminal/ghostty.yaml
 url: https://ghostty.org
 title: Ghostty
 category: technology/cli-terminal
@@ -69,7 +71,7 @@ hiring filters that a tool entry has no use for. Surfaced on the site as a Caree
 (`/career/companies`), but the schema and data folder are unaffected by that.
 
 ```yaml
-# data/companies/pakistan/arbisoft.yaml
+# data/career/companies/pakistan/arbisoft.yaml
 name: Arbisoft
 website: https://arbisoft.com
 country: pakistan
@@ -149,8 +151,9 @@ npm run preview           # serve the built output
 ## Repo layout
 
 ```
-data/links/<root>[/<sub>]/<slug>.yaml    root is one of the six fixed life-domain roots
-data/companies/<country>/<slug>.yaml     companies stay a flat single level
+data/<root>[/<sub>/<sub>/...]/<slug>.yaml       root is one of the six fixed life-domain roots,
+                                                depth below it is unbounded
+data/career/companies/<country>/<slug>.yaml    nested under Career, companies stay flat
 taxonomy/categories.yaml                 the open category/country registry
 schema/*.json                           JSON Schema - the source of truth for validation
 scripts/                                validation, the CLIs, shared helpers

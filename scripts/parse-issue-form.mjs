@@ -17,7 +17,7 @@
 import { appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseSubmission } from './lib/issue-form.mjs';
-import { loadCollection, writeYaml, REPO_ROOT } from './lib/yaml-io.mjs';
+import { loadCollection, writeYaml, REPO_ROOT, folderFor } from './lib/yaml-io.mjs';
 import { normalizeUrl } from './lib/url.mjs';
 import { checkCategory, addCategory, displayNameFor } from './lib/taxonomy.mjs';
 
@@ -117,7 +117,7 @@ if (subCheck && !subCheck.exists) {
 const notes = newLevelNotes.join('\n');
 
 // Filename comes only from the normalized slug, so a crafted title cannot traverse paths.
-const relPath = path.join('data', kind, group, `${slug}.yaml`);
+const relPath = path.relative(REPO_ROOT, path.join(folderFor(kind, group), `${slug}.yaml`));
 
 if (!dryRun) {
   if (!parentCheck.exists) {

@@ -10,7 +10,7 @@
  *
  * Nothing here is trusted blindly - scripts/import-bulk.mjs writes every result to a review
  * file with its confidence and reasoning, and only a human approval step promotes it into
- * data/links/**.
+ * data/**.
  */
 
 function hostOf(url) {

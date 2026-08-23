@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fetches and caches a favicon for every entry in data/links/** and data/companies/**.
+ * Fetches and caches a favicon for every entry in the dataset.
  *
  * Run by deploy.yml before the Astro build, so a freshly-merged entry (e.g. from an issue-form
  * PR, which doesn't cache its own favicon) gets one cached before the site is built. Also safe

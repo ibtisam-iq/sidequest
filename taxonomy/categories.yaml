@@ -1,12 +1,15 @@
 # sidequest taxonomy registry
 #
-# A two-level tree, not a flat list. Categories grow with the directory - nothing here is a
-# fixed enum.
+# An arbitrary-depth tree for links, not a flat list. Categories grow with the directory -
+# nothing here is a fixed enum.
 #
 #   slug    kebab-case identifier; must match the folder name under data/
 #   name    human-readable display name
 #   type    links | companies
-#   parent  omitted for a top-level category; set to a top-level slug for a subcategory
+#   parent  omitted for a top-level category; otherwise the FULL PATH of the immediate parent
+#           (e.g. `technology`, or `technology/dev-tools` for something nested one level
+#           deeper still) - not just its bare slug. This is what lets depth be unbounded
+#           without ambiguity: two categories under different branches may reuse a slug.
 #
 # For `links`, the SIX TOP-LEVEL ROOTS are fixed, durable life-domain categories, not
 # implementation categories or trend words: Career, Faith, Finance, Learning, Lifestyle,
@@ -15,15 +18,18 @@
 # See CLAUDE.md for the classification precedence rule used to place an entry among these six
 # when it could plausibly fit more than one.
 #
-# Only two levels are supported - a subcategory can never itself be a parent. A subcategory
-# named after its old flat top-level category (e.g. `dev-tools`, `ai-tools`) is a generic bucket
-# for entries that don't fit a more specific sibling - not a sign the hierarchy is deeper than
-# two levels.
+# Depth below a root is unbounded - a category may itself have children, which may have their
+# own, and so on. The site's top nav (the mega-menu) only ever shows a root's immediate children
+# on hover/tap regardless of how deep the tree goes underneath; deeper levels are reached by
+# clicking into a category page and browsing further. A subcategory named after its old flat
+# top-level category (e.g. `dev-tools`, `ai-tools`) is a generic bucket for entries that don't
+# fit a more specific sibling - not a sign the hierarchy needs to be deeper.
 #
-# For `companies`, the registry key is still the COUNTRY (mirroring data/companies/<country>/)
-# and stays flat - `parent` is never set for a companies entry. Industry is free-form and not
-# registered here. Companies are surfaced in the site under /career/companies, but that is a
-# navigation/routing decision, not a taxonomy one - this registry is unaffected by it.
+# For `companies`, the registry key is still the COUNTRY (mirroring
+# data/career/companies/<country>/) and stays flat - `parent` is never set for a companies
+# entry. Industry is free-form and not registered here. Companies live inside the Career root on
+# disk and are surfaced in the site under /career/companies, but that is a folder/navigation
+# decision, not a taxonomy one - this registry is unaffected by it.
 #
 # Entry counts are NOT stored. They are computed at build time by the site and by
 # `npm run validate -- --report`. Storing them would put every single-entry PR on the same line
@@ -43,10 +49,6 @@
   parent: career
 - slug: resume-application-tools
   name: Resume & Application Tools
-  type: links
-  parent: career
-- slug: career-research
-  name: Career Research
   type: links
   parent: career
 - slug: ecommerce-seller-tools
@@ -89,8 +91,8 @@
   name: Crypto Wallets & Exchanges
   type: links
   parent: finance
-- slug: fintech-payments
-  name: Fintech & Payments
+- slug: payment-processing-exchange-rates
+  name: Payment Processing & Exchange Rates
   type: links
   parent: finance
 

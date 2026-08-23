@@ -75,8 +75,10 @@ README.md  CONTRIBUTING.md  CODE_OF_CONDUCT.md  LICENSE
 package.json       root: deps for scripts/ only (ajv, js-yaml, @clack/prompts, ...)
 
 data/
-  links/<root-slug>[/<sub-slug>]/<entry-slug>.yaml   root is one of the six life-domain roots
-  companies/<country-slug>/<company-slug>.yaml       surfaced in the site at /career/companies
+  <root-slug>[/<sub-slug>/<sub-slug>/...]/<entry-slug>.yaml   root is one of the six life-domain
+                                                               roots; depth below it is unbounded
+  career/companies/<country-slug>/<company-slug>.yaml         nested under Career on disk too,
+                                                               surfaced at /career/companies
 
 taxonomy/
   categories.yaml  the open category/country registry
@@ -123,19 +125,24 @@ site/                  the Astro project (its own package.json)
 They are deliberately separate because they need different filtering. A company needs
 country/industry/hiring-status facets that a generic tool entry has no use for. This is a data
 and validation distinction only - **in the site's navigation, companies are not a top-level thing
-next to "Links"**; they're a feature at `/career/companies`, since a company is itself a kind of
-career-relevant resource. Nothing about the schema, folder layout, or validation below changed
-because of that - only where the site links to it from.
+next to the six roots**; they're a feature at `/career/companies`, since a company is itself a
+kind of career-relevant resource. On disk, companies live nested inside the Career root
+(`data/career/companies/`) rather than as a sibling top-level folder, matching where the site
+surfaces them - only the routing/folder decision changed for this, not the schema or validation
+below.
 
-### 1. Links - `data/links/<root-slug>[/<sub-slug>]/<entry-slug>.yaml`
+### 1. Links - `data/<root-slug>[/<sub-slug>/<sub-slug>/...]/<entry-slug>.yaml`
 
 Generic entries: tools, repos, articles, books, courses, communities, job boards, referral links.
+There is no `data/links/` wrapper folder - a link's file sits directly under one of the six root
+folders, optionally nested arbitrarily deep beneath it. A category page's URL is its category
+path with no prefix, e.g. `/technology/ai-coding-agents`.
 
 | Field | Req | Notes |
 |---|---|---|
 | `url` | ✔ | canonical URL |
 | `title` | ✔ | |
-| `category` | ✔ | a path into `taxonomy/categories.yaml` - `root` or `root/sub`, `type: links` |
+| `category` | ✔ | a path into `taxonomy/categories.yaml` - `root`, `root/sub`, or deeper, to any depth; `type: links` |
 | `tags` | ✔ | array, min 1, free-form, normalized lowercase-kebab |
 | `priority` | ✔ | `high` \| `medium` \| `low` |
 | `date_added` | ✔ | **quoted** ISO date, e.g. `"2026-08-22"` |
@@ -147,7 +154,7 @@ Generic entries: tools, repos, articles, books, courses, communities, job boards
 | `audience` | | free-form array: `developers`, `non-technical`, `job-seekers`, `everyone`, ... |
 | `legal_risk` | | boolean; required `true` under three specific categories - see below |
 
-### 2. Companies - `data/companies/<country-slug>/<company-slug>.yaml`
+### 2. Companies - `data/career/companies/<country-slug>/<company-slug>.yaml`
 
 | Field | Req | Notes |
 |---|---|---|
@@ -184,7 +191,7 @@ importance, ever. There is deliberately **no "AI" root**: AI-related entries liv
 Technology as subcategories (`technology/ai-coding-agents`, `technology/ai-chat-assistants`,
 etc.), because "AI" is a trend word, not a life domain. These six roots replaced a flat,
 implementation-shaped 13-category taxonomy (`dev-tools`, `ai-tools`, `fintech-payments`, ...) in
-a full restructuring - old category folders no longer exist anywhere in `data/links/`.
+a full restructuring - old category folders no longer exist anywhere in `data/`.
 
 ### Classification precedence
 
@@ -232,24 +239,39 @@ openness applies to what's underneath them.
   parent: technology
 ```
 
-For **links**, the registry key is the category path. For **companies**, the registry key is the
-**country** (mirroring `data/companies/<country>/`); `industry` stays free-form and unregistered,
-and the companies side of the registry is completely unaffected by the six-root restructuring.
+`parent` holds the **full path** of the immediate parent, not just its bare slug - so a category
+nested two levels below a root (say `technology/dev-tools/kubernetes`) has `parent:
+technology/dev-tools`. This is what makes depth genuinely unbounded without ambiguity: two
+categories in different branches are free to reuse the same slug (a `documentation` subcategory
+under two unrelated parents, say), because each is identified by its distinct full parent path
+rather than by slug alone. For a root-level category, or the common two-level case, this is
+identical to storing the bare root slug.
+
+For **links**, the registry key is the category path, to any depth. For **companies**, the
+registry key is the **country** (mirroring `data/career/companies/<country>/`); `industry` stays
+free-form and unregistered, and the companies side of the registry is completely unaffected by
+the six-root restructuring or by depth.
 
 When `add-link.mjs` / `add-company.mjs` is given a subcategory that doesn't exist yet it:
 
 1. normalizes it (lowercase, kebab-case);
 2. **fuzzy-matches it against its siblings only** (Levenshtein; warns at distance ≤2 or
-   normalized ratio <0.3) - other subcategories of the same root, or other top-level roots if
-   you're somehow proposing a new one - so the taxonomy doesn't fragment into near-duplicates
-   *within a root* - *"did you mean 'ai-chat-assistants'? you typed 'ai-chat-assistant'"*;
+   normalized ratio <0.3) - other subcategories of the same immediate parent, or other top-level
+   roots if you're somehow proposing a new one - so the taxonomy doesn't fragment into
+   near-duplicates *within a parent* - *"did you mean 'ai-chat-assistants'? you typed
+   'ai-chat-assistant'"*;
 3. if confirmed genuinely new, adds it to the registry and creates the data folder.
 
 A subcategory named after an old flat top-level category (e.g. `technology/dev-tools`,
-`technology/ai-tools`, `finance/fintech-payments`) is a **generic catch-all bucket** for entries
-that don't fit a more specific sibling subcategory - it is not a sign the hierarchy is deeper than
-two levels. Depth stays capped at root → subcategory; a third level is only added later if a
-specific subcategory genuinely outgrows it.
+`technology/ai-tools`) is a **generic catch-all bucket** for entries that don't fit a more
+specific sibling subcategory - it is not a sign the hierarchy needs to be deeper. Depth below a
+root is **unbounded** - a category may itself have children, which may have their own, and so on
+- but a new level should only be added when a specific subcategory genuinely outgrows it, not by
+default. The site's top nav (the mega-menu) only ever shows a root's immediate children on
+hover/tap regardless of how deep the real tree goes underneath; deeper levels are reached by
+clicking into a category page and browsing further, never by cascading hover flyouts. A category
+page that itself has children shows them as a clickable grid; a leaf category shows its own
+entries.
 
 **Tags are fully free-form** - no registry, just normalized to lowercase-kebab. Tags are meant to
 be broader and more numerous than categories.
@@ -268,13 +290,22 @@ concurrent issue-form PRs.
 - **Dates are quoted ISO strings** (`date_added: "2026-08-22"`). js-yaml 5's default YAML-1.2 CORE
   schema does not coerce timestamps; quoting makes parsing identical under js-yaml and Astro and
   matches JSON Schema `format: date`. Never write a bare unquoted date.
-- **Slug uniqueness is per collection** - unique within `data/links/**`, and separately unique
-  within `data/companies/**`. A link and a company may share a slug. `alternatives` only ever
-  references links, so cross-collection collision is harmless.
+- **Slug uniqueness is per collection** - unique across every link file under `data/` (excluding
+  the companies subtree), and separately unique within `data/career/companies/**`. A link and a
+  company may share a slug. `alternatives` only ever references links, so cross-collection
+  collision is harmless.
 - **`alternatives` uses bare entry slugs** (`alternatives: [obsidian]`, not `ai-tools/obsidian`),
   which is what per-collection uniqueness buys us. The relationship is rendered **bidirectionally**:
   if A lists B, B's page also shows A. The reverse map is computed once per build from the full
   dataset.
+- **URLs have no "links" or "companies" segment.** A category page's URL is its category path
+  verbatim (`/technology/ai-coding-agents`), served by a single catch-all route
+  (`site/src/pages/[...path].astro`) that resolves against `taxonomy/categories.yaml` at any
+  depth - there is no per-depth route file. An entry page is `/entry/<slug>` (link slugs are
+  unique dataset-wide, so this never needs the category in the URL). The "browse everything"
+  page is `/browse`, not `/links`. Companies keep their own explicit routes under
+  `/career/companies/**`, which win over the catch-all because Astro prioritises static routes
+  over a rest-parameter one.
 - **Favicons are fetched once and committed, never requested live.** `scripts/lib/favicon.mjs`
   saves each entry's icon to `site/public/favicons/<kind>/<slug>.<ext>` (namespaced by collection,
   for the same reason slugs are per-collection above). `Favicon.astro` checks that path at build

@@ -1,10 +1,10 @@
 ---
 import type { GetStaticPaths } from 'astro';
-import Layout from '../../../layouts/Layout.astro';
-import Favicon from '../../../components/Favicon.astro';
-import EntryCard from '../../../components/EntryCard.astro';
-import Breadcrumbs from '../../../components/Breadcrumbs.astro';
-import { getData, getCardItems, describeCategoryPath } from '../../../lib/data';
+import Layout from '../../layouts/Layout.astro';
+import Favicon from '../../components/Favicon.astro';
+import EntryCard from '../../components/EntryCard.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import { getData, getCardItems, describeCategoryPath } from '../../lib/data';
 
 export const getStaticPaths = (async () => {
   const data = await getData();
@@ -23,9 +23,10 @@ const entry = data.linkBySlug.get(slug)!;
 const { title, url, description, note, tags, priority, audience, added_by, date_added, legal_risk } =
   entry.data;
 
-const { parentSlug, parentName, subSlug, subName } = await describeCategoryPath(
-  entry.data.category,
-);
+// Root-first chain of every registered ancestor, however deep - a leaf category page and this
+// entry page share the same breadcrumb logic, since both ultimately describe a category path.
+const chain = await describeCategoryPath(entry.data.category);
+const leaf = chain.at(-1)!;
 
 /**
  * Forward and reverse references, already unioned at build time - so an entry that never
@@ -40,12 +41,10 @@ const declared = new Set(entry.data.alternatives ?? []);
 
 const host = new URL(url).hostname;
 const metaDescription =
-  description ?? note ?? `${title} - a ${subName ?? parentName} entry in the sidequest directory.`;
+  description ?? note ?? `${title} - a ${leaf.name} entry in the sidequest directory.`;
 
-const breadcrumbItems = [
-  { label: 'Links', href: '/links' },
-  { label: parentName, href: `/links/${parentSlug}` },
-  ...(subSlug ? [{ label: subName!, href: `/links/${parentSlug}/${subSlug}` }] : []),
+const breadcrumbItems: { label: string; href?: string }[] = [
+  ...chain.map((c) => ({ label: c.name, href: `/${c.path}` })),
   { label: title },
 ];
 
@@ -99,7 +98,7 @@ const jsonLd = {
         <a class="btn primary" href={url} target="_blank" rel="noopener nofollow ugc">Visit {title}</a>
         <a
           class="btn"
-          href={`https://github.com/ibtisam-iq/sidequest/blob/main/data/links/${entry.data.category}/${slug}.yaml`}
+          href={`https://github.com/ibtisam-iq/sidequest/blob/main/data/${entry.data.category}/${slug}.yaml`}
           target="_blank"
           rel="noopener"
         >
@@ -120,13 +119,12 @@ const jsonLd = {
         <div>
           <dt>Category</dt>
           <dd>
-            <a href={`/links/${parentSlug}`}>{parentName}</a>
-            {subName && (
+            {chain.map((c, i) => (
               <>
-                {' '}
-                / <a href={`/links/${parentSlug}/${subSlug}`}>{subName}</a>
+                {i > 0 && ' / '}
+                <a href={`/${c.path}`}>{c.name}</a>
               </>
-            )}
+            ))}
           </dd>
         </div>
         <div>
@@ -160,7 +158,7 @@ const jsonLd = {
       </dl>
 
       <div class="tags">
-        {tags.map((tag) => <a class="tag" href={`/links?tags=${tag}`}>#{tag}</a>)}
+        {tags.map((tag) => <a class="tag" href={`/browse?tags=${tag}`}>#{tag}</a>)}
       </div>
     </article>
 

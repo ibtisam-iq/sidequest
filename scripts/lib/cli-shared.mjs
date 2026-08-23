@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as p from '@clack/prompts';
-import { REPO_ROOT, writeYaml } from './yaml-io.mjs';
+import { REPO_ROOT, writeYaml, folderFor } from './yaml-io.mjs';
 import {
   topLevelFor,
   childrenOf,
@@ -212,7 +212,7 @@ export function resolveEntryPath(type, categoryPath, title) {
   const base = slugify(title);
   if (!base) throw new Error(`"${title}" does not normalize to a usable filename`);
 
-  const dir = path.join(REPO_ROOT, 'data', type, ...categoryPath.split('/'));
+  const dir = folderFor(type, categoryPath);
   let slug = base;
   let n = 2;
   while (existsSync(path.join(dir, `${slug}.yaml`))) slug = `${base}-${n++}`;
@@ -226,17 +226,17 @@ export function resolveEntryPath(type, categoryPath, title) {
  * Fetching here (rather than duplicating the call in add-link.mjs and add-company.mjs
  * separately) means both CLIs get it automatically, and a locally-added entry is committed with
  * its favicon already cached rather than waiting for the next deploy to pick it up.
+ *
+ * `kind` ('links' | 'companies') is passed explicitly by the caller - it can no longer be read
+ * back out of the file path since links live directly under data/<root>/... with no wrapper
+ * folder, and favicons are namespaced by kind regardless of where the entry sits on disk.
  */
-export async function writeAndValidate(filePath, data) {
+export async function writeAndValidate(kind, filePath, data) {
   await writeYaml(filePath, data);
 
   const rel = path.relative(REPO_ROOT, filePath);
   p.log.success(`Wrote ${rel}`);
 
-  // data/<kind>/<category>/<slug>.yaml - kind and slug are read back out of the path itself
-  // rather than threaded through as extra parameters everywhere writeAndValidate is called.
-  const parts = rel.split(path.sep);
-  const kind = parts[1];
   const slug = path.basename(filePath, '.yaml');
   const url = data.url ?? data.website;
 

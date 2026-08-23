@@ -22,7 +22,7 @@ const categories = (await getLinkCategoryTree()).filter((c) => c.count > 0).slic
 
     <div class="actions">
       <a class="btn primary" href="/">Back home</a>
-      <a class="btn" href="/links">Browse links</a>
+      <a class="btn" href="/browse">Browse links</a>
       <a class="btn" href="/career/companies">Browse companies</a>
       <a class="btn" href="/search">Search</a>
     </div>
@@ -33,7 +33,7 @@ const categories = (await getLinkCategoryTree()).filter((c) => c.count > 0).slic
           <p class="eyebrow">Popular categories</p>
           <div class="chips">
             {categories.map((category) => (
-              <a class="chip" href={`/links/${category.slug}`}>
+              <a class="chip" href={`/${category.path}`}>
                 {category.name}
                 <span class="n">{category.count}</span>
               </a>

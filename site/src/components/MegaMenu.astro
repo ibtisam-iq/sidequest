@@ -21,7 +21,7 @@ const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
 <nav class="mega" aria-label="Primary" data-pagefind-ignore data-mega-menu>
   <ul class="mega-bar">
     <li>
-      <a href="/links" class="mega-trigger mega-all" aria-current={!currentParent ? 'page' : undefined}>
+      <a href="/browse" class="mega-trigger mega-all" aria-current={!currentParent ? 'page' : undefined}>
         All links
       </a>
     </li>
@@ -33,7 +33,7 @@ const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
           <li class="mega-item" class:list={{ 'has-children': hasPanel }}>
             <span class="mega-trigger-wrap">
               <a
-                href={`/links/${parent.slug}`}
+                href={`/${parent.path}`}
                 class="mega-trigger"
                 aria-current={
                   currentParent === parent.slug && !currentSub && !onCompanies ? 'page' : undefined
@@ -74,7 +74,7 @@ const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
                   {parent.children.map((child) => (
                     <li>
                       <a
-                        href={`/links/${parent.slug}/${child.slug}`}
+                        href={`/${child.path}`}
                         aria-current={
                           currentParent === parent.slug && currentSub === child.slug
                             ? 'page'

@@ -137,4 +137,4 @@ const entry = {
   ...(note && { note }),
 };
 
-await writeAndValidate(filePath, entry);
+await writeAndValidate('links', filePath, entry);

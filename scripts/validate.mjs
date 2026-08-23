@@ -110,7 +110,7 @@ function checkDuplicateUrls(links, companies) {
 
 /**
  * Companies stay flat: `country` must be a registered top-level companies slug, and the file
- * must sit directly in `data/companies/<country>/`.
+ * must sit directly in `data/career/companies/<country>/`.
  */
 function checkCompanyTaxonomy(entries, taxonomy) {
   const registered = new Set(
@@ -132,15 +132,16 @@ function checkCompanyTaxonomy(entries, taxonomy) {
     if (entry.categoryPath !== value) {
       fail(
         entry.relPath,
-        `country is "${value}" but the file sits at "data/companies/${entry.categoryPath}" - they must match`,
+        `country is "${value}" but the file sits at "data/career/companies/${entry.categoryPath}" - they must match`,
       );
     }
   }
 }
 
 /**
- * Links are a two-level tree: `category` must resolve to a registered top-level category, or a
- * registered "parent/sub" path, and the file must sit at the matching folder path.
+ * Links are an arbitrary-depth tree: `category` must resolve to a chain of registered
+ * categories starting at one of the six roots, to any depth, and the file must sit at the
+ * matching folder path.
  */
 async function checkLinkTaxonomy(entries) {
   for (const entry of entries) {
@@ -160,7 +161,7 @@ async function checkLinkTaxonomy(entries) {
     if (entry.categoryPath !== value) {
       fail(
         entry.relPath,
-        `category is "${value}" but the file sits at "data/links/${entry.categoryPath}" - they must match`,
+        `category is "${value}" but the file sits at "data/${entry.categoryPath}" - they must match`,
       );
     }
   }

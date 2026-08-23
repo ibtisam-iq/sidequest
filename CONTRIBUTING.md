@@ -80,9 +80,9 @@ category against the registry, write the file, and re-run validation.
 
 ### By hand
 
-Create a file at `data/links/<root>/<slug>.yaml` (or `data/links/<root>/<sub>/<slug>.yaml` for a
-subcategory, `root` being one of career/faith/finance/learning/lifestyle/technology) or
-`data/companies/<country>/<slug>.yaml`, then:
+Create a file at `data/<root>/<slug>.yaml` (or `data/<root>/<sub>/<slug>.yaml`, nested as deep as
+the category actually is - `root` being one of career/faith/finance/learning/lifestyle/technology)
+or `data/career/companies/<country>/<slug>.yaml`, then:
 
 ```bash
 npm run validate
@@ -101,7 +101,7 @@ problem:
 |---|---|
 | Matches the JSON Schema in `schema/` | The schema is the single source of truth for both CI and the site |
 | No duplicate URLs anywhere in the dataset | Compared after normalization, so `www.` / tracking params / trailing slashes can't sneak a duplicate past |
-| Category path (or country) resolves in `taxonomy/categories.yaml` | Stops typo'd categories creating orphan folders. For links, both the root and, if given, the subcategory must be registered under it |
+| Category path (or country) resolves in `taxonomy/categories.yaml` | Stops typo'd categories creating orphan folders. For links, every segment of the path - root and however many subcategories deep it goes - must be registered under the one before it |
 | Folder path matches the entry's `category`/`country` field | The two must agree or the site routes to the wrong place |
 | Entry slug is unique **within its collection** | `alternatives` references entries by bare slug, so links must be unambiguous. A link and a company *may* share a slug |
 | `alternatives` point at real link entries | A dangling reference would silently render nothing |
@@ -112,34 +112,46 @@ problem:
 **Dates must be quoted.** Write `date_added: "2026-08-22"`, never `date_added: 2026-08-22`.
 Quoting guarantees it parses as a string across every YAML tool rather than becoming a timestamp.
 
-**Slugs are the filename.** `data/links/technology/cli-terminal/ghostty.yaml` has the slug
-`ghostty`. That's what `alternatives: [ghostty]` refers to, and what appears in the URL - the
-category path doesn't factor in, since slugs only need to be unique within their collection.
+**Slugs are the filename.** `data/technology/cli-terminal/ghostty.yaml` has the slug `ghostty`.
+That's what `alternatives: [ghostty]` refers to. An entry's own URL is `/entry/ghostty` - the
+category path doesn't factor in there either, since slugs only need to be unique within their
+collection. A *category's* URL is its category path verbatim, e.g. `/technology/cli-terminal`.
 
 ---
 
 ## The open taxonomy - proposing a new subcategory
 
 The **six top-level roots are fixed** - Career, Faith, Finance, Learning, Lifestyle, Technology -
-and don't change. Subcategories underneath them are **not a fixed enum** and grow with the
-directory. They live in [`taxonomy/categories.yaml`](taxonomy/categories.yaml), organized as a
-**two-level tree** (only two levels are supported; a subcategory never itself has children):
+and don't change. Subcategories underneath them are **not a fixed enum**, grow with the
+directory, and can nest to **unbounded depth** - a subcategory can itself have children, and so
+on. They live in [`taxonomy/categories.yaml`](taxonomy/categories.yaml):
 
 ```yaml
 - slug: technology
   name: Technology
   type: links      # links | companies
 
-- slug: ai-coding-agents
-  name: AI Coding Agents
+- slug: dev-tools
+  name: Dev Tools
   type: links
   parent: technology  # makes this a subcategory of technology
+
+- slug: kubernetes
+  name: Kubernetes
+  type: links
+  parent: technology/dev-tools  # nested one level deeper still
 ```
 
-A link's `category` field is a path: `technology` (flat) or `technology/ai-coding-agents` (with a
-subcategory). For **companies** the registry key is the **country**, and it's always flat -
-industry is deliberately free-form and not registered, because companies vary too widely for a
-curated list to be worth maintaining.
+`parent` is the **full path** of the immediate parent, not just its bare slug - for a root-level
+subcategory that's just the root, as in the `dev-tools` example above. A link's `category` field
+is that same path: `technology` (flat), `technology/dev-tools`, or deeper. For **companies** the
+registry key is the **country**, and it's always flat - industry is deliberately free-form and not
+registered, because companies vary too widely for a curated list to be worth maintaining.
+
+In practice, most categories stay one or two levels deep - only add a third when a specific
+subcategory genuinely outgrows a flatter shape, not by default. The site's nav only ever shows a
+root's immediate children on hover/tap regardless of depth; a deeper category is reached by
+clicking into a page and browsing further.
 
 **Adding a subcategory is expected, not exceptional.** You don't need permission:
 
@@ -147,8 +159,8 @@ curated list to be worth maintaining.
   registered automatically, and the PR says so.
 - Via **`npm run add-link`**: pick the root first, then either an existing subcategory or
   *Create a new subcategory*.
-- **By hand**: append a record to the registry (with `parent:` set to the root) and create the
-  matching folder.
+- **By hand**: append a record to the registry (with `parent:` set to the full path of the
+  immediate parent) and create the matching folder.
 
 ### The near-duplicate check
 

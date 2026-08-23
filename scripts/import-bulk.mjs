@@ -2,14 +2,14 @@
 /**
  * Reads a raindrop.io-style CSV export and/or a plain URL list, and drafts proposed link
  * entries into import/review.yaml for a human to approve, edit, or reject - it never writes
- * directly into data/links/**.
+ * directly into data/**.
  *
  * Usage:
  *   node scripts/import-bulk.mjs --csv path/to/export.csv
  *   node scripts/import-bulk.mjs --urls import/sources/urls.txt
  *   node scripts/import-bulk.mjs --csv export.csv --urls urls.txt   (both, in one review file)
  *
- * For each row: normalize the URL, skip anything already in data/links/** or data/companies/**,
+ * For each row: normalize the URL, skip anything already in the dataset,
  * skip anything on the personal-profile/ephemera exclusion list, guess a category/tags/legal_risk
  * via scripts/lib/import-heuristics.mjs, and write the result - never straight into the dataset.
  */
@@ -228,7 +228,7 @@ async function main() {
 # "low" (no match at all - category is null and MUST be filled in by hand).
 #
 # Go through this file, fix anything wrong, delete anything you don't want, then run
-# npm run import-review to write the approved entries into data/links/** and validate them.
+# npm run import-review to write the approved entries into data/** and validate them.
 # This file is gitignored - it is scratch, never committed as data.
 #
 # Generated ${new Date().toISOString().slice(0, 10)}: ${proposals.length} proposed, ${skipped.excluded} excluded (personal/ephemera), ${skipped.duplicateExisting} already in the dataset, ${skipped.duplicateInBatch} duplicated within this batch.

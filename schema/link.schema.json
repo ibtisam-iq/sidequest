@@ -21,8 +21,8 @@
     },
     "category": {
       "type": "string",
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)?$",
-      "description": "Category path: 'parent-slug' for a flat top-level category with no subcategories, or 'parent-slug/sub-slug' for one that has them. Both segments must exist in taxonomy/categories.yaml with type: links, and the path must match the containing folder path."
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)+$|^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Category path: one of the six root slugs on its own, or 'root/sub', 'root/sub/sub', ... to any depth. Every segment must exist in taxonomy/categories.yaml with type: links (each nested under the previous), and the path must match the containing folder path."
     },
     "tags": {
       "type": "array",
