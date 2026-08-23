@@ -22,6 +22,13 @@ forgotten, not being exhaustive. This is the actual reason the site is named "si
 governs every categorization and inclusion decision below - including your own judgment calls
 during a bulk import or when reviewing a submission.
 
+**Applies going forward, not retroactively.** This principle was written down explicitly during
+the six-root taxonomy restructuring (see STATUS.md). A handful of already-imported entries
+(ChatGPT, Perplexity, Gemini, Grok, DeepSeek, Binance, PayPal, Stripe, Coursera, Udemy) were
+explicitly requested by name in an earlier task before this rule existed, and were deliberately
+kept as pre-principle legacy entries rather than removed - a settled decision, not an oversight.
+Don't re-flag them or propose removing them; do apply the rule to everything new.
+
 ## What this project is
 
 **sidequest** is an open-source, git-backed personal directory for saving anything interesting

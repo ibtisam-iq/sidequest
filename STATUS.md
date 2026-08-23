@@ -1029,7 +1029,7 @@ distinct section below, titled and captioned as a Career feature rather than mix
 grid as the six roots. Added matching styling to the mega-menu's Companies entry and a quieter
 treatment for the "All links" escape hatch so it doesn't read as a seventh root.
 
-### Phase 7 - Bulk re-import governed by the founding principle: **partially blocked, flagging for a decision**
+### Phase 7 - Bulk re-import governed by the founding principle: **decided, kept as legacy**
 
 The founding principle didn't exist as an explicit rule when the original bulk import ran, so it
 was never applied as an exclusion filter against fame/well-known-ness - only against the
@@ -1043,15 +1043,18 @@ know about" - **ChatGPT, Perplexity, Gemini, Grok, DeepSeek** (`technology/ai-ch
 import task's own instructions, before this rule was written down.
 
 Per the same import task's own instruction ("when genuinely unsure, include it but flag it...
-rather than silently deciding either way"), these were **not deleted**. Deleting real,
-previously-requested curated data is a hard-to-reverse action outside what a bulk-import
-filtering pass should decide unilaterally - it's flagged here for an explicit decision: keep them as
-pre-principle legacy entries, or remove them now that the rule is explicit. Re-running the actual
-import pipeline against the original raw sources (the raindrop CSV, the plain URL list, the
-named-app lookups) was not possible in this session - those source files were scratch inputs
-under the gitignored `import/` directory from the prior session and are no longer present; only
-`import/sources/urls.txt` and a near-empty `review.yaml` (one still-unclassifiable entry) remain
-on disk.
+rather than silently deciding either way"), these were **not deleted** without asking first.
+Presented to the user as an explicit decision (keep as pre-principle legacy vs. remove now vs.
+review case-by-case) - **decision: keep them.** The founding principle governs new submissions
+from here forward; it is not retroactively enforced against entries that were explicitly
+requested by name before the rule existed. Nothing in `data/links/` changed as a result of this
+phase - the audit found the conflict, the user resolved it by leaving the data as-is.
+
+Re-running the actual import pipeline against the original raw sources (the raindrop CSV, the
+plain URL list, the named-app lookups) was not possible in this session regardless - those source
+files were scratch inputs under the gitignored `import/` directory from the prior session and are
+no longer present; only `import/sources/urls.txt` and a near-empty `review.yaml` (one
+still-unclassifiable entry) remain on disk.
 
 ### Phase 8 - Verification
 
@@ -1081,4 +1084,4 @@ Real-browser pass (desktop 1280px + mobile 375px, light and dark) against the bu
 coverage), `npm run validate` 218/218, `astro check` 0/0/0, site builds to 274 pages (four more
 than before: the three relocated `/career/companies/**` routes plus its country listing).
 
-**Next:** a decision on the Phase 7 conflict above, then this restructuring is fully closed out.
+This closes out the six-root taxonomy restructuring.
