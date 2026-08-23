@@ -1,0 +1,55 @@
+---
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
+interface Props {
+  /** The entry's slug (filename without extension). */
+  slug: string;
+  /** 'links' | 'companies' - namespaced for the same reason favicons are. */
+  kind: 'links' | 'companies';
+  alt: string;
+  eager?: boolean;
+}
+
+const { slug, kind, alt, eager = false } = Astro.props;
+
+/**
+ * Cover art is fetched once at build/add-time (scripts/lib/enrich.mjs, via the local CLIs, the
+ * issue-form pipeline, or the deploy-time backfill pass) and committed to
+ * site/public/covers/<kind>/<slug>.<ext> - never fetched live when the page renders. Unlike
+ * Favicon.astro there is no letter-initial fallback: when nothing is cached, this renders
+ * nothing at all, and callers should lay out around its absence rather than reserve space for it.
+ */
+const KNOWN_EXTENSIONS = ['jpg', 'png', 'webp', 'gif', 'svg', 'ico'];
+
+// Resolved from process.cwd() rather than import.meta.url for the same reason as Favicon.astro:
+// Astro/Vite rewrites a component's import.meta.url to a virtual module id, which makes
+// existsSync silently find nothing even when the file is real.
+const COVERS_ROOT = path.join(process.cwd(), 'public', 'covers');
+
+const cachedExt = KNOWN_EXTENSIONS.find((ext) =>
+  existsSync(path.join(COVERS_ROOT, kind, `${slug}.${ext}`)),
+);
+---
+
+{
+  cachedExt && (
+    <img
+      class="cover"
+      src={`/covers/${kind}/${slug}.${cachedExt}`}
+      alt={alt}
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+    />
+  )
+}
+
+<style>
+  .cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+    background: var(--bg-subtle);
+  }
+</style>

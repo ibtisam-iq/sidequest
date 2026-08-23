@@ -94,7 +94,8 @@ scripts/
     levenshtein.mjs    fuzzy-match distance, hand-rolled, zero deps
     taxonomy.mjs       registry read/write + fuzzy "did you mean" check
     yaml-io.mjs        read/write YAML data files
-    favicon.mjs        build-time favicon fetch-and-cache (no third-party call at runtime)
+    enrich.mjs         build-time favicon/cover/title/description fetch-and-cache (no third-party
+                        call at runtime) - what used to be favicon.mjs, extended
   normalize-url.mjs    thin CLI wrapper over lib/url.mjs
   normalize-slug.mjs   thin CLI wrapper over lib/slugify.mjs + lib/taxonomy.mjs
   validate.mjs         validates the whole dataset - used by CI *and* locally
@@ -102,12 +103,13 @@ scripts/
   add-company.mjs      interactive local CLI (npm run add-company)
   gen-zod-schemas.mjs  codegen: schema/*.json -> site/src/schemas/generated/*.ts
   parse-issue-form.mjs parses a GitHub Issue Form body (used by issue-to-pr.yml)
-  fetch-favicons.mjs   bulk favicon cache over the whole dataset (npm run fetch-favicons)
+  fetch-favicons.mjs   bulk favicon+cover cache over the whole dataset (npm run fetch-favicons)
 
 site/                  the Astro project (its own package.json)
   astro.config.mjs     site: 'https://sidequest.ibtisam-iq.com'
   public/CNAME         sidequest.ibtisam-iq.com
   public/favicons/<kind>/<slug>.<ext>   fetched by scripts/fetch-favicons.mjs, committed to git
+  public/covers/<kind>/<slug>.<ext>     same, for each entry's social-preview cover image
   src/content.config.ts
   src/schemas/generated/   GENERATED - gitignored, never hand-edit
   src/lib/  src/components/  src/pages/
@@ -141,14 +143,15 @@ path with no prefix, e.g. `/technology/ai-coding-agents`.
 | Field | Req | Notes |
 |---|---|---|
 | `url` | ✔ | canonical URL |
-| `title` | ✔ | |
+| `title` | ✔ | optional **to type** - if left blank when adding, auto-filled from the page's og:title/`<title>` before the entry is written; always non-empty in the committed YAML |
 | `category` | ✔ | a path into `taxonomy/categories.yaml` - `root`, `root/sub`, or deeper, to any depth; `type: links` |
 | `tags` | ✔ | array, min 1, free-form, normalized lowercase-kebab |
 | `priority` | ✔ | `high` \| `medium` \| `low` |
 | `date_added` | ✔ | **quoted** ISO date, e.g. `"2026-08-22"` |
 | `source` | ✔ | `local` \| `issue-form` \| `pr` |
 | `note` | | why you saved it / where you found it |
-| `description` | | one-line description shown on the card |
+| `description` | | one-line description shown on the card; optional to type, same auto-fill-if-blank rule as `title`, from og:description/meta description |
+| `image` | | the page's og:image URL, recorded automatically when found - provenance only, not what renders; see the enrichment note below |
 | `added_by` | | GitHub username |
 | `alternatives` | | array of **link** entry-slugs; powers the two-way alternatives feature |
 | `audience` | | free-form array: `developers`, `non-technical`, `job-seekers`, `everyone`, ... |
@@ -170,6 +173,7 @@ path with no prefix, e.g. `/technology/ai-coding-agents`.
 | `rating` | | personal note on why it's notable |
 | `tags` | | |
 | `remote_policy` | | `remote` \| `hybrid` \| `onsite` \| `unknown` |
+| `image` | | the website's og:image URL, recorded automatically when found - same provenance-only field as on links. `name` deliberately stays a typed field, not auto-filled: a company's real name isn't reliably guessable from a page `<title>` tag ("Home - Welcome to Acme"), unlike a generic link/article title |
 
 > **Relationship to the career repo.** The companies directory is conceptually adjacent to the
 > job-applications company-scraper skill in the user's separate career repo. They are deliberately
@@ -306,17 +310,36 @@ concurrent issue-form PRs.
   page is `/browse`, not `/links`. Companies keep their own explicit routes under
   `/career/companies/**`, which win over the catch-all because Astro prioritises static routes
   over a rest-parameter one.
-- **Favicons are fetched once and committed, never requested live.** `scripts/lib/favicon.mjs`
-  saves each entry's icon to `site/public/favicons/<kind>/<slug>.<ext>` (namespaced by collection,
-  for the same reason slugs are per-collection above). `Favicon.astro` checks that path at build
-  time and falls back to a letter initial if nothing is cached - there is no third-party favicon
-  URL anywhere in the rendered page. Resolve the favicons directory from `process.cwd()` in Astro
-  components, not `import.meta.url` - Astro/Vite rewrites a component's `import.meta.url` to a
-  virtual module id, which makes `existsSync` silently find nothing even when the file is real.
-  `deploy.yml` commits any newly-fetched favicon back to `main` as `github-actions[bot]`, with a
-  CI-skip marker in the message so that push doesn't retrigger the same workflow - GitHub
+- **Favicons and cover images are fetched once and committed, never requested live.**
+  `scripts/lib/enrich.mjs` (what used to be `favicon.mjs`, extended) saves each entry's icon to
+  `site/public/favicons/<kind>/<slug>.<ext>` and its social-preview image to
+  `site/public/covers/<kind>/<slug>.<ext>` (both namespaced by collection, for the same reason
+  slugs are per-collection above). `Favicon.astro`/`Cover.astro` check those paths at build time;
+  `Favicon.astro` falls back to a letter initial if nothing is cached, `Cover.astro` just renders
+  nothing - there is no third-party URL anywhere in the rendered page. Resolve the asset
+  directories from `process.cwd()` in Astro components, not `import.meta.url` - Astro/Vite
+  rewrites a component's `import.meta.url` to a virtual module id, which makes `existsSync`
+  silently find nothing even when the file is real.
+
+  The same module's `enrichEntry()` also extracts **title** and **description** from the page's
+  `<head>` in that one request - both fields are optional to type in `add-link.mjs` and the issue
+  form; if left blank, they're filled in from og:title/`<title>` and og:description/meta
+  description before the entry is validated and written. A field a person actually typed is never
+  overwritten. If enrichment can't find a title either (dead page, blocked fetch) and none was
+  typed, the write/PR fails with a message asking for one by hand - the schema still requires
+  `title` to be non-empty in the committed YAML, only the requirement to type it manually is
+  gone. `og:image` is recorded as the optional `image` field for provenance, but the actual cover
+  art shown on the site is always the cached file, checked by existence the same way favicons
+  are - `image` being absent does not mean no cover is cached (it may have been backfilled later
+  by `fetch-favicons.mjs`, which never writes back to the YAML). The bulk import pipeline
+  (`import-bulk.mjs`/`import-review.mjs`) prefers the raindrop CSV's own `cover`/`excerpt`
+  columns over a fresh live fetch when both are available, since those were captured at the
+  moment the link was originally saved.
+
+  `deploy.yml` commits any newly-fetched favicon/cover back to `main` as `github-actions[bot]`,
+  with a CI-skip marker in the message so that push doesn't retrigger the same workflow - GitHub
   recognises that marker natively for push-triggered runs. The step never blocks the deploy: it
-  only affects whether a future run has to refetch that one icon, not whether this run ships
+  only affects whether a future run has to refetch that one asset, not whether this run ships
   correctly.
 
   **Hazard, found the hard way:** that marker is a plain substring match against the whole commit
@@ -378,7 +401,7 @@ npm run preview          # serve the built site
 | `scripts/normalize-slug.mjs` | CLI wrapper over `lib/slugify.mjs` + `lib/taxonomy.mjs` - normalizes and fuzzy-checks a slug. |
 | `scripts/gen-zod-schemas.mjs` | Generates the Astro zod schemas from `schema/*.json`. Runs automatically via `predev`/`prebuild`. |
 | `scripts/parse-issue-form.mjs` | Parses a GitHub Issue Form markdown body into entry fields. Used only by `issue-to-pr.yml`. |
-| `scripts/fetch-favicons.mjs` | Fetches and caches a favicon for every entry that doesn't already have one in `site/public/favicons/<kind>/<slug>.<ext>`. Concurrency-limited, skips anything already cached, never fails the build over one dead site. `--force` refetches everything. Runs in `deploy.yml` before the Astro build, and per-entry inside `writeAndValidate` (shared by both add CLIs) right after writing. |
+| `scripts/fetch-favicons.mjs` | Fetches and caches a favicon AND a cover image for every entry that doesn't already have one, in `site/public/favicons/<kind>/<slug>.<ext>` and `site/public/covers/<kind>/<slug>.<ext>`. Concurrency-limited, skips anything already cached, never fails the build over one dead site. `--force` refetches everything. Runs in `deploy.yml` before the Astro build; a locally-added entry gets both cached immediately inside `writeAndValidate` (shared by both add CLIs) right after writing, via `scripts/lib/enrich.mjs`'s single-fetch `enrichEntry`/`fetchPageDetails`. |
 
 ---
 
@@ -388,7 +411,7 @@ npm run preview          # serve the built site
 |---|---|---|
 | `validate.yml` | PR touching `data/**`, `taxonomy/**`, `schema/**` | Runs `node scripts/validate.mjs`. The PR gate. |
 | `issue-to-pr.yml` | Issue opened with label `new-link` / `new-company` | Parses the form → normalizes → duplicate-checks → writes YAML → validates → opens a PR. |
-| `deploy.yml` | Push to `main` | Validates **first** (fail = stop, no deploy) → fetches and commits any uncached favicons → Astro build + Pagefind → deploy to Pages. |
+| `deploy.yml` | Push to `main` | Validates **first** (fail = stop, no deploy) → fetches and commits any uncached favicons/covers → Astro build + Pagefind → deploy to Pages. |
 
 All three shell out to the **same** `scripts/validate.mjs` a contributor runs locally, so CI and
 local can't drift.

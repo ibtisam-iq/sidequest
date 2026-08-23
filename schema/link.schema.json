@@ -17,7 +17,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 120,
-      "description": "Display name."
+      "description": "Display name. Always non-empty in the committed YAML - optional to type when adding an entry (auto-filled from the page's og:title/<title> if left blank), but required here regardless of how it was filled in."
     },
     "category": {
       "type": "string",
@@ -57,7 +57,13 @@
     "description": {
       "type": "string",
       "maxLength": 300,
-      "description": "One-line description shown on the card."
+      "description": "One-line description shown on the card. Optional to type - if left blank when the entry is added, it is auto-filled from the page's og:description/meta description, provided the page has one."
+    },
+    "image": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://",
+      "description": "The page's social preview image (og:image), recorded automatically when found at add-time. The actual cover art shown on the site is a build-time cached copy at site/public/covers/links/<slug>.<ext> - this field is provenance, not what gets rendered, and its absence does not mean no cover is cached."
     },
     "added_by": {
       "type": "string",

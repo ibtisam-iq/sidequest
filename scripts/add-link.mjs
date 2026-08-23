@@ -9,13 +9,13 @@ import {
   p,
   bail,
   todayIso,
-  requiredText,
   promptUrl,
   promptTags,
   promptOptional,
   pickCategory,
   resolveEntryPath,
   writeAndValidate,
+  fetchPageDetails,
 } from './lib/cli-shared.mjs';
 
 p.intro('sidequest - add a link');
@@ -40,9 +40,27 @@ for (const e of companies) {
 
 const url = await promptUrl('URL', existingUrls);
 
+// One request for the page's <head> feeds the favicon, cover image, title, and description all
+// at once - fetched here, before the title is finalized, because the filename this entry gets
+// written to depends on the title, and the title itself may come from this very fetch.
+const s0 = p.spinner();
+s0.start('Fetching page details');
+const details = await fetchPageDetails(url);
+s0.stop(details.title ? `Found "${details.title}"` : 'Could not read the page - title required');
+
 const title = bail(
-  await p.text({ message: 'Title', placeholder: 'Ghostty', validate: requiredText('A title') }),
+  await p.text({
+    message: details.title
+      ? 'Title (leave blank to use the page title above)'
+      : 'Title',
+    placeholder: details.title || 'Ghostty',
+  }),
 );
+const finalTitle = (title ?? '').trim() || details.title;
+if (!finalTitle) {
+  p.cancel('No title given, and none could be found on the page - re-run and type one by hand.');
+  process.exit(1);
+}
 
 const category = await pickCategory('links');
 const tags = await promptTags('Tags (comma-separated)');
@@ -78,7 +96,11 @@ const priority = bail(
   }),
 );
 
-const description = await promptOptional('One-line description', 'What is it, in a sentence?');
+const description = await promptOptional(
+  details.description ? 'One-line description (leave blank to use the page description)' : 'One-line description',
+  details.description || 'What is it, in a sentence?',
+);
+const finalDescription = description || details.description;
 const note = await promptOptional('Note', 'Why you saved it / where you found it');
 
 const audience = slugifyList(
@@ -118,14 +140,15 @@ if (linkSlugs.length) {
 
 const addedBy = await promptOptional('Your GitHub username', 'ibtisam-iq');
 
-const { filePath } = resolveEntryPath('links', category, title);
+const { filePath } = resolveEntryPath('links', category, finalTitle);
 
 // Key order here is the order they appear in the written YAML - required first, then optional.
 const entry = {
   url,
-  title: title.trim(),
+  title: finalTitle.trim(),
   category,
-  ...(description && { description }),
+  ...(finalDescription && { description: finalDescription }),
+  ...(details.imageUrl && { image: details.imageUrl }),
   tags,
   priority,
   ...(audience.length && { audience }),
@@ -137,4 +160,6 @@ const entry = {
   ...(note && { note }),
 };
 
-await writeAndValidate('links', filePath, entry);
+await writeAndValidate('links', filePath, entry, {
+  precached: { favicon: details.favicon, cover: details.cover },
+});

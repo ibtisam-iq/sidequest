@@ -29,7 +29,7 @@ import { load, dump } from 'js-yaml';
 import { REPO_ROOT, writeYaml, loadCollection } from './lib/yaml-io.mjs';
 import { slugify, slugifyList, isValidSlug } from './lib/slugify.mjs';
 import { normalizeUrl } from './lib/url.mjs';
-import { fetchFaviconForEntry } from './lib/favicon.mjs';
+import { fetchFaviconForEntry, fetchCoverForEntry, cacheCoverFromUrl } from './lib/enrich.mjs';
 import { pickCategory, resolveEntryPath } from './lib/cli-shared.mjs';
 
 const REVIEW_PATH = path.join(REPO_ROOT, 'import', 'review.yaml');
@@ -53,6 +53,7 @@ function toEntry(item) {
     title: item.title.trim(),
     category: item.category,
     ...(item.description && { description: item.description }),
+    ...(item.image && { image: item.image }),
     tags: slugifyList(tags),
     priority: item.priority ?? 'medium',
     ...(item.legal_risk && { legal_risk: true }),
@@ -82,7 +83,17 @@ async function writeApproved(item) {
   await writeYaml(filePath, entry);
 
   const favicon = await fetchFaviconForEntry('links', slug, entry.url);
-  return { filePath: path.relative(REPO_ROOT, filePath), favicon: favicon.status };
+  // A raindrop-sourced cover was captured at the moment the link was originally saved, which is
+  // more reliable than fetching a live page that may have changed or gone offline since - prefer
+  // it over a fresh og:image fetch whenever the CSV actually had one.
+  const cover = entry.image
+    ? await cacheCoverFromUrl('links', slug, entry.image)
+    : await fetchCoverForEntry('links', slug, entry.url);
+  return {
+    filePath: path.relative(REPO_ROOT, filePath),
+    favicon: favicon.status,
+    cover: cover.status,
+  };
 }
 
 async function runInteractive(items) {
@@ -141,7 +152,7 @@ async function runInteractive(items) {
     }
 
     const result = await writeApproved(item);
-    p.log.success(`Wrote ${result.filePath} (favicon: ${result.favicon})`);
+    p.log.success(`Wrote ${result.filePath} (favicon: ${result.favicon}, cover: ${result.cover})`);
     decisions.approved++;
   }
 
@@ -235,7 +246,7 @@ async function main() {
 
         try {
           const written = await writeApproved(item);
-          console.log(`  wrote  ${written.filePath}  (favicon: ${written.favicon})`);
+          console.log(`  wrote  ${written.filePath}  (favicon: ${written.favicon}, cover: ${written.cover})`);
           known.set(canonical, written.filePath);
           decisions.approved++;
         } catch (err) {

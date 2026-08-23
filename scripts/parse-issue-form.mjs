@@ -20,6 +20,8 @@ import { parseSubmission } from './lib/issue-form.mjs';
 import { loadCollection, writeYaml, REPO_ROOT, folderFor } from './lib/yaml-io.mjs';
 import { normalizeUrl } from './lib/url.mjs';
 import { checkCategory, addCategory, displayNameFor } from './lib/taxonomy.mjs';
+import { slugify } from './lib/slugify.mjs';
+import { fetchPageDetails } from './lib/enrich.mjs';
 
 const args = process.argv.slice(2);
 const kindFlag = args.indexOf('--kind');
@@ -53,10 +55,30 @@ const fail = async (reason, code = 1) => {
 
 const today = (process.env.TODAY || new Date().toISOString().slice(0, 10)).slice(0, 10);
 
-const { entry, group, slug, errors } = parseSubmission(kind, process.env.ISSUE_BODY ?? '', {
+const { entry, group, slug: parsedSlug, errors } = parseSubmission(kind, process.env.ISSUE_BODY ?? '', {
   author: (process.env.ISSUE_AUTHOR ?? '').trim(),
   today,
 });
+
+// Title and description are optional inputs for links - the same page fetch that would
+// otherwise be deferred to deploy-time favicon/cover caching runs here instead, once, whenever
+// either is left blank, and fills them in (and `image`) before validation. Never runs when the
+// URL itself failed to parse, and never overwrites a field the submitter actually typed.
+let slug = parsedSlug;
+if (kind === 'links' && entry.url && (!entry.title || !entry.description)) {
+  const details = await fetchPageDetails(entry.url);
+  if (!entry.title && details.title) entry.title = details.title;
+  if (!entry.description && details.description) entry.description = details.description;
+  if (!entry.image && details.imageUrl) entry.image = details.imageUrl;
+  slug = slugify(entry.title || '');
+}
+
+if (kind === 'links' && !entry.title) {
+  errors.push(
+    'Title is required, and none could be automatically determined from the page - please provide one.',
+  );
+}
+if (!slug) errors.push('Could not derive a filename from the title/name.');
 
 if (errors.length) await fail(errors.map((e) => `- ${e}`).join('\n'));
 

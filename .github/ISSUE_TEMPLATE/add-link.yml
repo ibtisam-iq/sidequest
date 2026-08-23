@@ -30,10 +30,10 @@ body:
     id: title
     attributes:
       label: Title
-      description: The name it should be listed under.
+      description: >
+        The name it should be listed under. Leave blank and it's auto-filled from the page's own
+        title when the PR is generated.
       placeholder: Ghostty
-    validations:
-      required: true
 
   - type: input
     id: category
@@ -76,7 +76,7 @@ body:
     id: description
     attributes:
       label: Description
-      description: One line on what it is.
+      description: One line on what it is. Leave blank to auto-fill from the page, if it has one.
       placeholder: A fast, native, GPU-accelerated terminal emulator.
 
   - type: textarea

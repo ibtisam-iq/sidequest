@@ -14,7 +14,7 @@ import {
 } from './taxonomy.mjs';
 import { slugify, slugifyList } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
-import { fetchFaviconForEntry } from './favicon.mjs';
+import { fetchPageDetails, cacheCandidate } from './enrich.mjs';
 
 /** Abort cleanly on Ctrl-C instead of writing a half-built entry. */
 export function bail(value) {
@@ -221,17 +221,24 @@ export function resolveEntryPath(type, categoryPath, title) {
 }
 
 /**
- * Write the entry, fetch its favicon, then re-run the real validator over the whole dataset.
+ * Write the entry, cache its favicon and cover image, then re-run the real validator over the
+ * whole dataset.
  *
- * Fetching here (rather than duplicating the call in add-link.mjs and add-company.mjs
+ * Doing this here (rather than duplicating the call in add-link.mjs and add-company.mjs
  * separately) means both CLIs get it automatically, and a locally-added entry is committed with
- * its favicon already cached rather than waiting for the next deploy to pick it up.
+ * its assets already cached rather than waiting for the next deploy to pick them up.
  *
  * `kind` ('links' | 'companies') is passed explicitly by the caller - it can no longer be read
  * back out of the file path since links live directly under data/<root>/... with no wrapper
- * folder, and favicons are namespaced by kind regardless of where the entry sits on disk.
+ * folder, and assets are namespaced by kind regardless of where the entry sits on disk.
+ *
+ * `precached` (optional) carries favicon/cover bytes already downloaded by fetchPageDetails() at
+ * a point before the entry's slug was known (title/description enrichment needs to happen before
+ * the filename can be derived) - passing them here avoids a second HTTP request for the same
+ * page. When omitted, this fetches fresh (e.g. the add-company.mjs flow, which has no title/
+ * description enrichment step and so can fetch straight from the known URL).
  */
-export async function writeAndValidate(kind, filePath, data) {
+export async function writeAndValidate(kind, filePath, data, { precached } = {}) {
   await writeYaml(filePath, data);
 
   const rel = path.relative(REPO_ROOT, filePath);
@@ -240,13 +247,25 @@ export async function writeAndValidate(kind, filePath, data) {
   const slug = path.basename(filePath, '.yaml');
   const url = data.url ?? data.website;
 
-  if (url) {
+  if (precached) {
     const s1 = p.spinner();
-    s1.start('Fetching favicon');
-    const favicon = await fetchFaviconForEntry(kind, slug, url);
-    if (favicon.status === 'saved') s1.stop(`Cached favicon (.${favicon.ext})`);
-    else if (favicon.status === 'skipped') s1.stop('Favicon already cached');
-    else s1.stop(`No favicon found - will show a letter initial (${favicon.reason})`);
+    s1.start('Caching favicon and cover image');
+    const favicon = await cacheCandidate(kind, slug, precached.favicon, { root: 'favicon' });
+    const cover = await cacheCandidate(kind, slug, precached.cover, { root: 'cover' });
+    s1.stop(
+      `Favicon: ${favicon.status === 'failed' ? 'none found' : `cached (.${favicon.ext})`} · ` +
+        `Cover: ${cover.status === 'failed' ? 'none found' : `cached (.${cover.ext})`}`,
+    );
+  } else if (url) {
+    const s1 = p.spinner();
+    s1.start('Fetching favicon and cover image');
+    const details = await fetchPageDetails(url);
+    const favicon = await cacheCandidate(kind, slug, details.favicon, { root: 'favicon' });
+    const cover = await cacheCandidate(kind, slug, details.cover, { root: 'cover' });
+    s1.stop(
+      `Favicon: ${favicon.status === 'failed' ? 'none found' : `cached (.${favicon.ext})`} · ` +
+        `Cover: ${cover.status === 'failed' ? 'none found' : `cached (.${cover.ext})`}`,
+    );
   }
 
   const s = p.spinner();
@@ -267,4 +286,4 @@ export async function writeAndValidate(kind, filePath, data) {
   process.exitCode = 1;
 }
 
-export { p };
+export { p, fetchPageDetails };

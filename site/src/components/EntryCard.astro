@@ -1,6 +1,7 @@
 ---
 import type { CardItem } from '../lib/data';
 import Favicon from './Favicon.astro';
+import Cover from './Cover.astro';
 
 interface Props {
   item: CardItem;
@@ -20,6 +21,8 @@ const host = (() => {
 ---
 
 <article class="card" data-type={item.type}>
+  <Cover slug={item.slug} kind={item.type === 'link' ? 'links' : 'companies'} alt="" />
+
   <div class="card-top">
     <Favicon slug={item.slug} kind={item.type === 'link' ? 'links' : 'companies'} title={item.title} size={28} />
 
@@ -83,6 +86,14 @@ const host = (() => {
     box-shadow: var(--shadow-sm);
     transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
     height: 100%;
+    overflow: hidden;
+  }
+
+  /* Bleeds to the card's edges - the card itself supplies the padding for everything below it. */
+  .card :global(.cover) {
+    margin: calc(var(--sp-4) * -1) calc(var(--sp-4) * -1) 0;
+    width: calc(100% + var(--sp-4) * 2);
+    border-radius: 0;
   }
 
   .card:hover {

@@ -93,6 +93,9 @@ async function readCsvRows(csvPath) {
       note: r.note,
       tagsHint: r.tags,
       createdAt: r.created,
+      // Raindrop's own cover, captured at the moment the link was originally saved - preferred
+      // over a fresh live fetch, which may hit a page that's since changed or gone offline.
+      coverUrl: r.cover?.trim(),
       source: 'csv',
     };
   });
@@ -204,6 +207,8 @@ async function main() {
       .map((t) => slugify(t))
       .filter(Boolean);
 
+    const image = row.coverUrl && /^https?:\/\//.test(row.coverUrl) ? row.coverUrl : undefined;
+
     proposals.push({
       title: row.title,
       url: canonical,
@@ -212,6 +217,7 @@ async function main() {
       priority: 'medium',
       ...(guess.legalRisk && { legal_risk: true }),
       description: deriveDescription(row),
+      ...(image && { image }),
       date_added: row.createdAt ? row.createdAt.slice(0, 10) : undefined,
       confidence: guess.confidence,
       reason: guess.reason,

@@ -41,6 +41,10 @@ the issue** and it re-runs automatically - no need to open a new one.
 
 - **URL** - the canonical page, not a redirect or a search result. `?utm_source=…` is fine, it
   gets stripped.
+- **Title and Description** - both optional. Leave either blank and it's filled in automatically
+  from the page's own title/description when the entry is generated - a manually typed value is
+  never overwritten. If the page can't be reached and no title was typed, the submission fails
+  with a message asking you to provide one.
 - **Category** - one of the six fixed roots (`career`, `faith`, `finance`, `learning`,
   `lifestyle`, `technology`), optionally with `/sub` for a subcategory (e.g. `technology`,
   `technology/ai-coding-agents`). Check [`taxonomy/categories.yaml`](taxonomy/categories.yaml) for

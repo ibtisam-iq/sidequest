@@ -1212,3 +1212,90 @@ Real browser, desktop and mobile (375px), both themes:
   273 pages.
 
 This closes out the taxonomy/routing follow-up correction.
+
+## 2026-08-23 - Build-time enrichment: favicon fetch extended to title/description/cover image
+
+Extended the existing build-time favicon fetch into a single enrichment step that also pulls
+title, description, and a cover image (og:image) from the same HTTP request - `scripts/lib/
+favicon.mjs` became `scripts/lib/enrich.mjs`, same discipline throughout: fetched once, cached in
+the repo, never fetched live when a visitor loads the page.
+
+### What changed
+
+- **One fetch, four things.** `enrichEntry(kind, slug, url)` fetches a page's `<head>` once and
+  returns favicon + cover-image caching results plus whatever title/description it found -
+  favicon and cover download reuse the same `<head>` html already fetched for the other, so
+  add-time enrichment never hits a page twice. `fetchPageDetails(url)` is the slug-less variant
+  used when the entry's filename isn't known yet (see below): pure network fetch, no disk I/O,
+  returns the downloaded favicon/cover bytes in memory for the caller to cache once the slug is
+  resolved via `cacheCandidate()`. `fetchFaviconForEntry`/`fetchCoverForEntry` remain as
+  standalone, single-purpose fetches for the bulk backfill pass, which has no use for title/
+  description over the whole dataset.
+- **`title` and `description` are optional to type, not optional to have.** `add-link.mjs` and
+  the "Add a link" issue form no longer require Title - leave it blank and the entry is
+  auto-filled from the page's og:title/`<title>` (Description similarly, from og:description/meta
+  description) before the entry is validated and written. The JSON Schema is unchanged: `title`
+  is still `minLength: 1` in the final committed YAML, only the requirement to type it by hand is
+  gone. If enrichment can't find a title either (dead page, blocked fetch) and none was typed,
+  the write fails (local CLI) or the PR isn't opened (issue form) with a message asking for one
+  manually - never a blank or garbage title. A field a person actually typed is never overwritten
+  by what the page says, in either path.
+  - Chicken-and-egg fix: an entry's filename derives from its title, but the title itself may
+    come from fetching the page - so the local CLI now fetches the page (`fetchPageDetails`)
+    right after the URL prompt, before the title prompt, and only resolves the filename
+    afterward. `writeAndValidate` then caches the already-downloaded favicon/cover bytes under
+    the now-known slug via `cacheCandidate`, rather than fetching a second time.
+  - `add-company.mjs` deliberately does **not** get this treatment for `name`: a company's real
+    name isn't reliably guessable from a page `<title>` tag ("Home - Welcome to Acme"), and there
+    is no company-schema analogue to `description` to auto-fill either. It still gets the
+    favicon/cover half of enrichment (fetched once, right after the website prompt).
+- **New optional `image` field**, added to both `schema/link.schema.json` and
+  `schema/company.schema.json` - the page's og:image URL, recorded when found. This is
+  provenance, not what renders: the actual cover art is always the cached file at
+  `site/public/covers/<kind>/<slug>.<ext>`, checked by existence exactly like `Favicon.astro`
+  checks for a cached icon, via a new `Cover.astro` component (no letter-initial fallback here -
+  it just renders nothing when uncached). Wired into `EntryCard.astro` (bleeds to the card's top
+  edge) and the entry detail page (above the header, `eager`-loaded).
+- **`fetch-favicons.mjs` now fetches covers too**, in the same concurrency-limited pass, same
+  script/npm-script name (kept for minimal churn to `deploy.yml`/docs) - it fetches live og:image
+  for any entry missing a cached cover, independent of whether that entry's YAML has an `image`
+  field at all. `deploy.yml`'s commit-back step now stages `site/public/covers` alongside
+  `site/public/favicons`.
+- **Bulk import prefers the raindrop CSV's own data.** `import-bulk.mjs` now also captures the
+  CSV's `cover` column; `import-review.mjs`'s `writeApproved()` caches that URL directly as the
+  entry's cover when present (via `cacheCoverFromUrl`), falling back to a live og:image fetch only
+  when the CSV didn't have one or the entry didn't come from the CSV at all (the plain URL list).
+  The `excerpt` column was already preferred for `description` before this change - unaffected.
+
+### A real correctness bug caught during verification, not by inspection
+
+`extractMetaContent`'s first implementation captured a `content="..."` attribute with `[^"']*`
+(excluding both quote characters), which truncates at the **first apostrophe** inside a
+double-quoted attribute - common enough in real og:description text ("a workspace that doesn't
+sacrifice...") to silently corrupt a large fraction of real descriptions. Caught by actually
+fetching a real page (zellij.dev) during verification rather than trusting the happy-path unit
+tests, which only used apostrophe-free fixtures. Fixed by rewriting extraction to be quote-aware
+(match the tag once, then pull each attribute with its own quote-delimiter-aware regex) rather
+than excluding both quote characters from the captured content. Two regression tests added
+(`enrich.test.mjs`) asserting an apostrophe mid-description round-trips correctly, and that the
+non-og `<title>`/meta-description fallback still works when a page sets no Open Graph tags at all.
+
+### Verification
+
+Real browser, not just a passing script - `fetchPageDetails('https://ghostty.org')` confirmed
+title/description/image/favicon/cover all populate correctly from one call; a throwaway entry
+(`technology/cli-terminal/zellij.yaml`, written via the same code path `add-link.mjs` uses) was
+built and checked in the browser at desktop and 375px mobile, both themes: cover image renders on
+both the category-page card (bleeding to the card edges) and the entry detail page (above the
+header), the apostrophe-containing description renders intact, and the Network tab showed zero
+third-party requests at view time - every favicon/cover request was same-origin
+(`/favicons/links/...`, `/covers/links/...`). Confirmed cards without a cached cover (Ghostty,
+Warp - added before this feature) render with no gap or broken image, not a placeholder. Confirmed
+the "never overwrite human content" rule in isolation (a truthy existing value always wins over a
+freshly-fetched one via `existing || fetched`, which is how both `add-link.mjs` and
+`parse-issue-form.mjs` apply it) and reasoned through the raindrop-cover-preference logic in
+`import-review.mjs`, rather than running the full bulk-import pipeline end to end (no real CSV
+export was on hand during this session). The throwaway entry and its cached assets were removed
+afterward; `npm run validate` confirms the dataset is back to exactly 218/218. `npm test` 94/94
+(8 new tests: cover-cache helpers, `enrichEntry`/`fetchPageDetails`/`cacheCandidate` behavior, and
+the two `extractMeta` regression tests above), `astro check` 0/0/0, site builds cleanly.

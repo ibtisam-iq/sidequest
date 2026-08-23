@@ -66,6 +66,12 @@
     "remote_policy": {
       "type": "string",
       "enum": ["remote", "hybrid", "onsite", "unknown"]
+    },
+    "image": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://",
+      "description": "The company website's social preview image (og:image), recorded automatically when found at add-time. The actual cover art shown on the site is a build-time cached copy at site/public/covers/companies/<slug>.<ext> - this field is provenance, not what gets rendered, and its absence does not mean no cover is cached."
     }
   }
 }

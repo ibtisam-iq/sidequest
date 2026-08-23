@@ -36,14 +36,14 @@ jobs:
       - name: Validate dataset
         run: npm run validate
 
-      # Caches any entry's favicon that arrived without one already committed - mainly
-      # issue-form PRs, since the local CLIs cache theirs immediately when the entry is added.
-      # Never fails the build: a dead site or missing icon just leaves that entry to fall back
-      # to a letter initial, handled by Favicon.astro.
-      - name: Fetch favicons
+      # Caches any entry's favicon and cover image that arrived without one already committed -
+      # mainly issue-form PRs, since the local CLIs cache theirs immediately when the entry is
+      # added. Never fails the build: a dead site or missing icon/og:image just leaves that entry
+      # to fall back to a letter initial / no cover art, handled by Favicon.astro / Cover.astro.
+      - name: Fetch favicons and covers
         run: npm run fetch-favicons
 
-      # Persist anything newly fetched above, so the next deploy doesn't refetch the same icon
+      # Persist anything newly fetched above, so the next deploy doesn't refetch the same asset
       # for an entry that only ever arrived via the issue-form path. The commit message carries
       # [skip ci], which GitHub recognises natively for push-triggered workflows - without it,
       # pushing here would trigger a second run of this very workflow, which would push again,
@@ -53,16 +53,16 @@ jobs:
       #
       # Never blocks the deploy: if the push races with something else and fails, the fetched
       # files still exist in this run's working directory and still ship in this build - the
-      # only cost is that a future run may refetch the same icon, which is the pre-existing
+      # only cost is that a future run may refetch the same asset, which is the pre-existing
       # behavior this step is trying to reduce, not a new failure mode.
-      - name: Commit newly-cached favicons
+      - name: Commit newly-cached favicons and covers
         continue-on-error: true
         run: |
-          if git status --porcelain -- site/public/favicons | grep -q .; then
+          if git status --porcelain -- site/public/favicons site/public/covers | grep -q .; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add site/public/favicons
-            git commit -m "chore(favicons): cache newly fetched icons [skip ci]"
+            git add site/public/favicons site/public/covers
+            git commit -m "chore(assets): cache newly fetched favicons and covers [skip ci]"
             git pull --rebase origin main
             git push origin HEAD:main
           else

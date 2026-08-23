@@ -15,6 +15,7 @@ import {
   pickCategory,
   resolveEntryPath,
   writeAndValidate,
+  fetchPageDetails,
 } from './lib/cli-shared.mjs';
 
 p.intro('sidequest - add a company');
@@ -37,6 +38,14 @@ for (const e of companies) {
 }
 
 const website = await promptUrl('Website', existingUrls);
+
+// Same single-fetch enrichment as add-link.mjs, though only the favicon/cover image/og:image
+// are used here - a company's registered name isn't something worth guessing from a page
+// <title> tag ("Home - Welcome to Acme"), so it stays a typed field.
+const s0 = p.spinner();
+s0.start('Fetching page details');
+const details = await fetchPageDetails(website);
+s0.stop(details.favicon || details.cover ? 'Found favicon/cover art' : 'No assets found on the page');
 
 const name = bail(
   await p.text({
@@ -115,10 +124,13 @@ const entry = {
   remote_policy: remotePolicy,
   hiring_status: hiringStatus,
   ...(careersUrl && { careers_url: careersUrl }),
+  ...(details.imageUrl && { image: details.imageUrl }),
   ...(tags.length && { tags }),
   ...(rating && { rating }),
   date_added: todayIso(),
   source: 'local',
 };
 
-await writeAndValidate('companies', filePath, entry);
+await writeAndValidate('companies', filePath, entry, {
+  precached: { favicon: details.favicon, cover: details.cover },
+});

@@ -88,8 +88,11 @@ function buildLink(fields, { author, today }) {
     errors.push(`"${rawUrl || '(empty)'}" is not a valid URL.`);
   }
 
+  // Title is optional to type here - if left blank, parse-issue-form.mjs fetches the page and
+  // fills it in from og:title/<title> before validation. It is still required in the final
+  // committed YAML; that requirement just isn't enforced at this synchronous parsing stage,
+  // since filling it in needs a network fetch this function deliberately doesn't make.
   const title = get('title');
-  if (!title) errors.push('Title is required.');
 
   // "parent" or "parent/sub" - each segment slugified on its own so a submitted subcategory
   // path doesn't get flattened into one wrong slug (slugify() alone would treat "/" as just
@@ -207,7 +210,14 @@ export function parseSubmission(kind, body, { author = '', today } = {}) {
       ? buildLink(fields, { author, today })
       : buildCompany(fields, { author, today });
 
-  if (!result.slug) result.errors.push('Could not derive a filename from the title/name.');
+  // For companies, name is always typed - an empty slug here means it genuinely couldn't be
+  // slugified (e.g. non-Latin text with no fallback), so it's a real error. For links, an empty
+  // slug just as often means a genuinely blank Title waiting on parse-issue-form.mjs's page-fetch
+  // enrichment step, so that check happens there instead, after enrichment has had a chance to
+  // fill the title in.
+  if (!result.slug && kind === 'companies') {
+    result.errors.push('Could not derive a filename from the company name.');
+  }
 
   return result;
 }
