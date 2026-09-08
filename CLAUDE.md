@@ -33,15 +33,8 @@ Don't re-flag them or propose removing them; do apply the rule to everything new
 
 **sidequest** is an open-source, git-backed personal directory for saving anything interesting
 found while browsing: tools, GitHub repos, articles, books, courses, communities, remote job
-boards, referral links - anything worth rescuing from being forgotten.
-
-There is exactly **one entity type**. A companies directory used to live here as a second entity
-type nested under Career; it was removed once the real company dataset turned out to be a
-13,000-row systematic scrape rather than a handful of hand-picked entries. That is a
-comprehensive reference dataset, which is the opposite of this project's founding principle, and
-at that scale the page-per-entry static model breaks outright (130k entries would be ~3.7GB of
-HTML against GitHub Pages' 1GB limit). It lives in its own repository on its own subdomain
-instead. Do not reintroduce a second entity type here.
+boards, referral links - anything worth rescuing from being forgotten. There is exactly **one
+entity type**, described below.
 
 Inspiration is Awesome Lists and free-for.dev, but the comparison stops at mechanics - those
 projects aim for comprehensiveness within a niche; sidequest deliberately does not, per the
@@ -67,6 +60,11 @@ Bookmark counts, upvote counts, "verified" badges, and any user-facing engagemen
 chat feature. Each requires user accounts and a backend, which contradicts the static flat-file,
 no-database design the whole repo rests on. This is a standing decision, not an oversight - do
 not add anything in this family later, however small it looks in isolation.
+
+**A second entity type**, likewise. One shape of entry, one schema. A companies directory was
+tried here and removed: comprehensive reference datasets belong somewhere else, both on principle
+and because one static page per row stops being deployable in the tens of thousands. If a
+collection needs its own facets and its own scale, it needs its own repo.
 
 ---
 
@@ -147,11 +145,6 @@ path with no prefix, e.g. `/technology/ai-coding-agents`.
 | `alternatives` | | array of entry-slugs; powers the two-way alternatives feature |
 | `audience` | | free-form array: `developers`, `non-technical`, `job-seekers`, `everyone`, ... |
 | `legal_risk` | | boolean; required `true` under three specific categories - see below |
-
-> **Relationship to the separate companies repo.** The companies directory that used to live here
-> now has its own repository and subdomain, and is conceptually adjacent to the job-applications
-> company-scraper skill in the user's separate career repo. All three are deliberately separate
-> projects. Nothing here should assume any of them exist.
 
 ---
 
@@ -388,9 +381,6 @@ create it automatically from the form definition. If you fork this repo, run:
 gh label create new-link     --color 1D76DB --description "Issue-form submission for a new entry"
 gh label create automated-pr --color 5319E7 --description "PR opened automatically from an issue form"
 ```
-
-(The repo also still carries a now-unused `new-company` label from before the companies feature
-was removed. Harmless, and nothing routes on it any more.)
 
 ### Bot-created PRs need the checks approved once
 
