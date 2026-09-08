@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Interactive local CLI for adding a link entry. `npm run add-link` */
 
-import { loadCollection } from './lib/yaml-io.mjs';
+import { loadEntries } from './lib/yaml-io.mjs';
 import { normalizeUrl } from './lib/url.mjs';
 import { slugifyList } from './lib/slugify.mjs';
 import { LEGAL_RISK_REQUIRED_CATEGORIES } from './lib/taxonomy.mjs';
@@ -20,21 +20,13 @@ import {
 
 p.intro('sidequest - add a link');
 
-const [links, companies] = await Promise.all([
-  loadCollection('links'),
-  loadCollection('companies'),
-]);
+const entries = await loadEntries();
 
-// Duplicate URLs are checked across the whole dataset, companies included.
+// Duplicate URLs are checked across the whole dataset.
 const existingUrls = new Map();
-for (const e of links) {
+for (const e of entries) {
   try {
     existingUrls.set(normalizeUrl(e.data.url), e.relPath);
-  } catch {}
-}
-for (const e of companies) {
-  try {
-    existingUrls.set(normalizeUrl(e.data.website), e.relPath);
   } catch {}
 }
 
@@ -62,7 +54,7 @@ if (!finalTitle) {
   process.exit(1);
 }
 
-const category = await pickCategory('links');
+const category = await pickCategory();
 const tags = await promptTags('Tags (comma-separated)');
 
 // Content-integrity rule, not optional styling: validate.mjs rejects any entry filed under one
@@ -119,7 +111,7 @@ const audience = slugifyList(
   ) ?? [],
 );
 
-const linkSlugs = links.map((e) => e.slug).sort();
+const linkSlugs = entries.map((e) => e.slug).sort();
 let alternatives = [];
 
 if (linkSlugs.length) {
@@ -140,7 +132,7 @@ if (linkSlugs.length) {
 
 const addedBy = await promptOptional('Your GitHub username', 'ibtisam-iq');
 
-const { filePath } = resolveEntryPath('links', category, finalTitle);
+const { filePath } = resolveEntryPath(category, finalTitle);
 
 // Key order here is the order they appear in the written YAML - required first, then optional.
 const entry = {
@@ -160,6 +152,6 @@ const entry = {
   ...(note && { note }),
 };
 
-await writeAndValidate('links', filePath, entry, {
+await writeAndValidate(filePath, entry, {
   precached: { favicon: details.favicon, cover: details.cover },
 });

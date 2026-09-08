@@ -7,13 +7,12 @@ import { REPO_ROOT } from './yaml-io.mjs';
  * cached (or backfilled into the YAML), never fetched live at visitor page-load time.
  *
  * Pages must never call out to a third party at runtime - an entry's icon and cover image are
- * fetched once here, saved into site/public/favicons/<kind>/<slug>.<ext> and
- * site/public/covers/<kind>/<slug>.<ext>, committed to git like any other data file, and served
- * from the same origin as the rest of the site from then on. Favicon.astro/Cover.astro fall back
- * to a letter initial / nothing when no cached file exists for a slug.
+ * fetched once here, saved into site/public/favicons/<slug>.<ext> and
+ * site/public/covers/<slug>.<ext>, committed to git like any other data file, and served from
+ * the same origin as the rest of the site from then on. Favicon.astro/Cover.astro fall back to a
+ * letter initial / nothing when no cached file exists for a slug.
  *
- * Namespaced by kind (links/companies) because slugs are only unique WITHIN a collection - a link
- * and a company may legitimately share a slug, and they almost certainly have different assets.
+ * Keyed by bare slug, which validate.mjs enforces as unique dataset-wide.
  *
  * `enrichEntry` is the single-fetch entry point used at add-time (local CLIs, the issue-form
  * pipeline): one HTTP request for the page's <head> feeds the favicon, cover, title, and
@@ -36,14 +35,10 @@ const DESCRIPTION_MAX = 300;
 /** Every extension this module might have written, in no particular order. */
 export const KNOWN_EXTENSIONS = ['svg', 'png', 'ico', 'jpg', 'gif', 'webp'];
 
-function assetDir(root, kind) {
-  return path.join(root, kind);
-}
-
-async function cachedExtIn(root, kind, slug) {
+async function cachedExtIn(root, slug) {
   let entries;
   try {
-    entries = await readdir(assetDir(root, kind));
+    entries = await readdir(root);
   } catch {
     return null;
   }
@@ -56,13 +51,13 @@ async function cachedExtIn(root, kind, slug) {
 }
 
 /** The cached favicon's extension for a slug, or null if nothing is cached yet. */
-export async function cachedFaviconExt(kind, slug) {
-  return cachedExtIn(FAVICONS_ROOT, kind, slug);
+export async function cachedFaviconExt(slug) {
+  return cachedExtIn(FAVICONS_ROOT, slug);
 }
 
 /** The cached cover image's extension for a slug, or null if nothing is cached yet. */
-export async function cachedCoverExt(kind, slug) {
-  return cachedExtIn(COVERS_ROOT, kind, slug);
+export async function cachedCoverExt(slug) {
+  return cachedExtIn(COVERS_ROOT, slug);
 }
 
 async function withTimeout(signalConsumer) {
@@ -272,36 +267,35 @@ async function downloadImage(url) {
   }).catch(() => null);
 }
 
-/** Writes an already-downloaded image to `root/kind/slug.ext`. */
-async function saveAsset(root, kind, slug, buf, ext) {
-  await mkdir(assetDir(root, kind), { recursive: true });
-  await writeFile(path.join(assetDir(root, kind), `${slug}.${ext}`), buf);
+/** Writes an already-downloaded image to `root/slug.ext`. */
+async function saveAsset(root, slug, buf, ext) {
+  await mkdir(root, { recursive: true });
+  await writeFile(path.join(root, `${slug}.${ext}`), buf);
 }
 
 /** Downloads one URL and caches it directly as a slug's cover image - no candidate scoring. */
-export async function cacheCoverFromUrl(kind, slug, imageUrl, { force = false } = {}) {
+export async function cacheCoverFromUrl(slug, imageUrl, { force = false } = {}) {
   if (!force) {
-    const existing = await cachedCoverExt(kind, slug);
+    const existing = await cachedCoverExt(slug);
     if (existing) return { status: 'skipped', ext: existing };
   }
   const downloaded = await downloadImage(imageUrl);
   if (!downloaded) return { status: 'failed', reason: 'could not download the image' };
-  await saveAsset(COVERS_ROOT, kind, slug, downloaded.buf, downloaded.ext);
+  await saveAsset(COVERS_ROOT, slug, downloaded.buf, downloaded.ext);
   return { status: 'saved', ext: downloaded.ext };
 }
 
 /**
  * Fetches and caches the favicon for one entry.
  *
- * @param kind   'links' | 'companies'
  * @param slug   the entry's filename without extension
- * @param url    the entry's url (links) or website (companies)
+ * @param url    the entry's url
  * @param force  refetch even if a cached file already exists
  * @returns {Promise<{status: 'saved'|'skipped'|'failed', ext?: string, reason?: string}>}
  */
-export async function fetchFaviconForEntry(kind, slug, url, { force = false } = {}) {
+export async function fetchFaviconForEntry(slug, url, { force = false } = {}) {
   if (!force) {
-    const existing = await cachedFaviconExt(kind, slug);
+    const existing = await cachedFaviconExt(slug);
     if (existing) return { status: 'skipped', ext: existing };
   }
 
@@ -324,14 +318,14 @@ export async function fetchFaviconForEntry(kind, slug, url, { force = false } = 
 
   if (!downloaded) return { status: 'failed', reason: 'no fetchable icon found' };
 
-  await saveAsset(FAVICONS_ROOT, kind, slug, downloaded.buf, downloaded.ext);
+  await saveAsset(FAVICONS_ROOT, slug, downloaded.buf, downloaded.ext);
   return { status: 'saved', ext: downloaded.ext };
 }
 
 /** Fetches and caches just the cover image (og:image) for one entry - a standalone, fresh fetch. */
-export async function fetchCoverForEntry(kind, slug, url, { force = false } = {}) {
+export async function fetchCoverForEntry(slug, url, { force = false } = {}) {
   if (!force) {
-    const existing = await cachedCoverExt(kind, slug);
+    const existing = await cachedCoverExt(slug);
     if (existing) return { status: 'skipped', ext: existing };
   }
 
@@ -341,7 +335,7 @@ export async function fetchCoverForEntry(kind, slug, url, { force = false } = {}
   const { imageUrl } = extractMeta(head.html, head.finalUrl);
   if (!imageUrl) return { status: 'failed', reason: 'no og:image found' };
 
-  return cacheCoverFromUrl(kind, slug, imageUrl, { force });
+  return cacheCoverFromUrl(slug, imageUrl, { force });
 }
 
 /**
@@ -359,7 +353,7 @@ export async function fetchCoverForEntry(kind, slug, url, { force = false } = {}
  *   imageUrl?: string,
  * }>}
  */
-export async function enrichEntry(kind, slug, url, { force = false } = {}) {
+export async function enrichEntry(slug, url, { force = false } = {}) {
   let origin;
   try {
     origin = new URL(url).origin;
@@ -375,8 +369,8 @@ export async function enrichEntry(kind, slug, url, { force = false } = {}) {
   iconCandidates.push({ url: `${origin}/favicon.ico`, score: -1 });
 
   let favicon;
-  if (!force && (await cachedFaviconExt(kind, slug))) {
-    favicon = { status: 'skipped', ext: await cachedFaviconExt(kind, slug) };
+  if (!force && (await cachedFaviconExt(slug))) {
+    favicon = { status: 'skipped', ext: await cachedFaviconExt(slug) };
   } else {
     let downloaded = null;
     for (const candidate of iconCandidates.slice(0, 4)) {
@@ -384,7 +378,7 @@ export async function enrichEntry(kind, slug, url, { force = false } = {}) {
       if (downloaded) break;
     }
     favicon = downloaded
-      ? await saveAsset(FAVICONS_ROOT, kind, slug, downloaded.buf, downloaded.ext).then(() => ({
+      ? await saveAsset(FAVICONS_ROOT, slug, downloaded.buf, downloaded.ext).then(() => ({
           status: 'saved',
           ext: downloaded.ext,
         }))
@@ -392,7 +386,7 @@ export async function enrichEntry(kind, slug, url, { force = false } = {}) {
   }
 
   const cover = meta.imageUrl
-    ? await cacheCoverFromUrl(kind, slug, meta.imageUrl, { force })
+    ? await cacheCoverFromUrl(slug, meta.imageUrl, { force })
     : { status: 'failed', reason: 'no og:image found' };
 
   return { favicon, cover, title: meta.title, description: meta.description, imageUrl: meta.imageUrl };
@@ -431,18 +425,18 @@ export async function fetchPageDetails(url) {
 }
 
 /** Caches a pre-fetched {buf, ext} candidate (from fetchPageDetails) under a now-known slug. */
-export async function cacheCandidate(kind, slug, candidate, { root = 'favicon' } = {}) {
+export async function cacheCandidate(slug, candidate, { root = 'favicon' } = {}) {
   const isFavicon = root === 'favicon';
   const rootDir = isFavicon ? FAVICONS_ROOT : COVERS_ROOT;
   const cachedExtFn = isFavicon ? cachedFaviconExt : cachedCoverExt;
 
-  const existing = await cachedExtFn(kind, slug);
+  const existing = await cachedExtFn(slug);
   if (existing) return { status: 'skipped', ext: existing };
 
   if (!candidate) {
     return { status: 'failed', reason: isFavicon ? 'no fetchable icon found' : 'no og:image found' };
   }
 
-  await saveAsset(rootDir, kind, slug, candidate.buf, candidate.ext);
+  await saveAsset(rootDir, slug, candidate.buf, candidate.ext);
   return { status: 'saved', ext: candidate.ext };
 }

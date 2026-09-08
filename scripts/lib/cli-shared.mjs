@@ -1,17 +1,11 @@
-/** Shared interactive pieces for add-link.mjs and add-company.mjs. */
+/** Shared interactive pieces for add-link.mjs. */
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import { REPO_ROOT, writeYaml, folderFor } from './yaml-io.mjs';
-import {
-  topLevelFor,
-  childrenOf,
-  checkCategory,
-  addCategory,
-  displayNameFor,
-} from './taxonomy.mjs';
+import { topLevel, childrenOf, checkCategory, addCategory, displayNameFor } from './taxonomy.mjs';
 import { slugify, slugifyList } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
 import { fetchPageDetails, cacheCandidate } from './enrich.mjs';
@@ -84,14 +78,14 @@ export async function promptOptional(message, placeholder) {
 }
 
 /**
- * Prompts for a brand-new category/subcategory/country name, fuzzy-checks it against
- * `siblings`, and registers it. The fuzzy check is the whole point: it fires before anything is
- * written, scoped to `siblings` (already the right scope by the time this is called - top-level
- * categories of one type, or the subcategories of one specific parent), so the taxonomy doesn't
- * quietly fragment into ai-tool / ai-tools / ai_tools, and a subcategory never gets compared
- * against an unrelated parent's subcategories.
+ * Prompts for a brand-new category/subcategory name, fuzzy-checks it against `siblings`, and
+ * registers it. The fuzzy check is the whole point: it fires before anything is written, scoped
+ * to `siblings` (already the right scope by the time this is called - the six roots, or the
+ * subcategories of one specific parent), so the taxonomy doesn't quietly fragment into
+ * ai-tool / ai-tools / ai_tools, and a subcategory never gets compared against an unrelated
+ * parent's subcategories.
  */
-async function createNewCategory({ label, type, parent, placeholder }) {
+async function createNewCategory({ label, parent, placeholder }) {
   const input = bail(
     await p.text({
       message: `New ${label} name`,
@@ -102,7 +96,7 @@ async function createNewCategory({ label, type, parent, placeholder }) {
     }),
   );
 
-  const { slug, exists, nearMatches } = await checkCategory(input, type, parent);
+  const { slug, exists, nearMatches } = await checkCategory(input, parent);
 
   if (exists) {
     p.log.info(`"${slug}" already exists - using it.`);
@@ -133,7 +127,7 @@ async function createNewCategory({ label, type, parent, placeholder }) {
     }),
   );
 
-  await addCategory({ slug, name: name.trim(), type, parent });
+  await addCategory({ slug, name: name.trim(), parent });
   p.log.success(`Registered new ${label} "${slug}" in taxonomy/categories.yaml`);
   return slug;
 }
@@ -142,7 +136,7 @@ async function createNewCategory({ label, type, parent, placeholder }) {
  * Offers the existing `siblings` plus "+ Create a new <label>", and either returns the picked
  * slug or delegates to createNewCategory.
  */
-async function pickOrCreate({ label, type, parent, siblings, placeholder }) {
+async function pickOrCreate({ label, parent, siblings, placeholder }) {
   const choice = bail(
     await p.select({
       message: `Which ${label}?`,
@@ -154,34 +148,22 @@ async function pickOrCreate({ label, type, parent, siblings, placeholder }) {
   );
 
   if (choice !== '__new__') return choice;
-  return createNewCategory({ label, type, parent, placeholder });
+  return createNewCategory({ label, parent, placeholder });
 }
 
 /**
- * Pick a country (companies stay flat, exactly as before), or a category PATH for a link -
- * top-level first, then optionally one of its subcategories. Returns the country slug, or the
+ * Pick a category PATH - top-level first, then optionally one of its subcategories. Returns the
  * full category path ("parent-slug" for a flat pick, "parent-slug/sub-slug" for a nested one).
  */
-export async function pickCategory(type) {
-  if (type === 'companies') {
-    return pickOrCreate({
-      label: 'country',
-      type: 'companies',
-      parent: null,
-      siblings: await topLevelFor('companies'),
-      placeholder: 'United States',
-    });
-  }
-
+export async function pickCategory() {
   const parentSlug = await pickOrCreate({
     label: 'category',
-    type: 'links',
     parent: null,
-    siblings: await topLevelFor('links'),
+    siblings: await topLevel(),
     placeholder: 'Podcasts',
   });
 
-  const subSiblings = await childrenOf('links', parentSlug);
+  const subSiblings = await childrenOf(parentSlug);
 
   const subChoice = bail(
     await p.select({
@@ -200,19 +182,18 @@ export async function pickCategory(type) {
 
   const subSlug = await createNewCategory({
     label: 'subcategory',
-    type: 'links',
     parent: parentSlug,
     placeholder: 'e.g. CLI & Terminal',
   });
   return `${parentSlug}/${subSlug}`;
 }
 
-/** Unique filename within the collection folder, derived only from the normalized slug. */
-export function resolveEntryPath(type, categoryPath, title) {
+/** Unique filename within the category folder, derived only from the normalized slug. */
+export function resolveEntryPath(categoryPath, title) {
   const base = slugify(title);
   if (!base) throw new Error(`"${title}" does not normalize to a usable filename`);
 
-  const dir = folderFor(type, categoryPath);
+  const dir = folderFor(categoryPath);
   let slug = base;
   let n = 2;
   while (existsSync(path.join(dir, `${slug}.yaml`))) slug = `${base}-${n++}`;
@@ -224,34 +205,29 @@ export function resolveEntryPath(type, categoryPath, title) {
  * Write the entry, cache its favicon and cover image, then re-run the real validator over the
  * whole dataset.
  *
- * Doing this here (rather than duplicating the call in add-link.mjs and add-company.mjs
- * separately) means both CLIs get it automatically, and a locally-added entry is committed with
- * its assets already cached rather than waiting for the next deploy to pick them up.
- *
- * `kind` ('links' | 'companies') is passed explicitly by the caller - it can no longer be read
- * back out of the file path since links live directly under data/<root>/... with no wrapper
- * folder, and assets are namespaced by kind regardless of where the entry sits on disk.
+ * Doing this here (rather than in add-link.mjs) keeps the write, the asset caching and the
+ * re-validation in one place, and means a locally-added entry is committed with its assets
+ * already cached rather than waiting for the next deploy to pick them up.
  *
  * `precached` (optional) carries favicon/cover bytes already downloaded by fetchPageDetails() at
  * a point before the entry's slug was known (title/description enrichment needs to happen before
  * the filename can be derived) - passing them here avoids a second HTTP request for the same
- * page. When omitted, this fetches fresh (e.g. the add-company.mjs flow, which has no title/
- * description enrichment step and so can fetch straight from the known URL).
+ * page. When omitted, this fetches fresh from the entry's URL.
  */
-export async function writeAndValidate(kind, filePath, data, { precached } = {}) {
+export async function writeAndValidate(filePath, data, { precached } = {}) {
   await writeYaml(filePath, data);
 
   const rel = path.relative(REPO_ROOT, filePath);
   p.log.success(`Wrote ${rel}`);
 
   const slug = path.basename(filePath, '.yaml');
-  const url = data.url ?? data.website;
+  const { url } = data;
 
   if (precached) {
     const s1 = p.spinner();
     s1.start('Caching favicon and cover image');
-    const favicon = await cacheCandidate(kind, slug, precached.favicon, { root: 'favicon' });
-    const cover = await cacheCandidate(kind, slug, precached.cover, { root: 'cover' });
+    const favicon = await cacheCandidate(slug, precached.favicon, { root: 'favicon' });
+    const cover = await cacheCandidate(slug, precached.cover, { root: 'cover' });
     s1.stop(
       `Favicon: ${favicon.status === 'failed' ? 'none found' : `cached (.${favicon.ext})`} · ` +
         `Cover: ${cover.status === 'failed' ? 'none found' : `cached (.${cover.ext})`}`,
@@ -260,8 +236,8 @@ export async function writeAndValidate(kind, filePath, data, { precached } = {})
     const s1 = p.spinner();
     s1.start('Fetching favicon and cover image');
     const details = await fetchPageDetails(url);
-    const favicon = await cacheCandidate(kind, slug, details.favicon, { root: 'favicon' });
-    const cover = await cacheCandidate(kind, slug, details.cover, { root: 'cover' });
+    const favicon = await cacheCandidate(slug, details.favicon, { root: 'favicon' });
+    const cover = await cacheCandidate(slug, details.cover, { root: 'cover' });
     s1.stop(
       `Favicon: ${favicon.status === 'failed' ? 'none found' : `cached (.${favicon.ext})`} · ` +
         `Cover: ${cover.status === 'failed' ? 'none found' : `cached (.${cover.ext})`}`,

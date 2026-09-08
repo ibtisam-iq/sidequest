@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Browse from '../components/Browse.astro';
 import { getCardItems, getLinkCategoryTree } from '../lib/data';
 
-const items = (await getCardItems()).filter((i) => i.type === 'link');
+const items = await getCardItems();
 const tree = await getLinkCategoryTree();
 const populatedCount = tree.filter((c) => c.count > 0).length;
 

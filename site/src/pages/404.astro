@@ -9,7 +9,7 @@ const categories = (await getLinkCategoryTree()).filter((c) => c.count > 0).slic
 
 <Layout
   title="Page not found"
-  description="That page doesn't exist in the sidequest directory. Browse links and companies instead."
+  description="That page doesn't exist in the sidequest directory. Browse the directory instead."
   noindex
 >
   <div class="wrap page">
@@ -23,7 +23,6 @@ const categories = (await getLinkCategoryTree()).filter((c) => c.count > 0).slic
     <div class="actions">
       <a class="btn primary" href="/">Back home</a>
       <a class="btn" href="/browse">Browse links</a>
-      <a class="btn" href="/career/companies">Browse companies</a>
       <a class="btn" href="/search">Search</a>
     </div>
 
@@ -57,7 +56,7 @@ const categories = (await getLinkCategoryTree()).filter((c) => c.count > 0).slic
     font-size: var(--text-4xl);
     font-weight: 700;
     letter-spacing: -0.04em;
-    background: linear-gradient(100deg, var(--accent), var(--company));
+    background: linear-gradient(100deg, var(--accent), var(--accent-hover));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

@@ -5,25 +5,22 @@ import path from 'node:path';
 interface Props {
   /** The entry's slug (filename without extension). */
   slug: string;
-  /** 'links' | 'companies' - favicons are namespaced by collection, since slugs are only unique
-   * within one collection and a link and a company may share a slug. */
-  kind: 'links' | 'companies';
   /** Used for the initial shown when no cached icon exists for this entry. */
   title: string;
   size?: number;
   eager?: boolean;
 }
 
-const { slug, kind, title, size = 28, eager = false } = Astro.props;
+const { slug, title, size = 28, eager = false } = Astro.props;
 
 /**
  * Favicons are fetched once at build/add-time by scripts/fetch-favicons.mjs (or the CLIs) and
- * committed to site/public/favicons/<kind>/<slug>.<ext> - the page never calls out to a
+ * committed to site/public/favicons/<slug>.<ext> - the page never calls out to a
  * third-party favicon service at runtime. If nothing was cached for this slug (a brand-new
  * entry the fetch step couldn't reach, or hasn't run for yet), it falls back to a letter initial
  * rather than trying a live request.
  *
- * Duplicated here rather than imported from scripts/lib/favicon.mjs deliberately: this project
+ * Duplicated here rather than imported from scripts/lib/enrich.mjs deliberately: this project
  * keeps root scripts/ and site/ as independent packages with their own dependencies, and this
  * check only needs node:fs, so it isn't worth coupling the two.
  */
@@ -35,7 +32,7 @@ const KNOWN_EXTENSIONS = ['svg', 'png', 'ico', 'jpg', 'gif', 'webp'];
 const FAVICONS_ROOT = path.join(process.cwd(), 'public', 'favicons');
 
 const cachedExt = KNOWN_EXTENSIONS.find((ext) =>
-  existsSync(path.join(FAVICONS_ROOT, kind, `${slug}.${ext}`)),
+  existsSync(path.join(FAVICONS_ROOT, `${slug}.${ext}`)),
 );
 
 const initial = (title.trim()[0] ?? '?').toUpperCase();
@@ -45,7 +42,7 @@ const initial = (title.trim()[0] ?? '?').toUpperCase();
   {
     cachedExt && (
       <img
-        src={`/favicons/${kind}/${slug}.${cachedExt}`}
+        src={`/favicons/${slug}.${cachedExt}`}
         alt=""
         width={size}
         height={size}

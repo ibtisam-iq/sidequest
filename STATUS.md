@@ -1299,3 +1299,88 @@ export was on hand during this session). The throwaway entry and its cached asse
 afterward; `npm run validate` confirms the dataset is back to exactly 218/218. `npm test` 94/94
 (8 new tests: cover-cache helpers, `enrichEntry`/`fetchPageDetails`/`cacheCandidate` behavior, and
 the two `extractMeta` regression tests above), `astro check` 0/0/0, site builds cleanly.
+
+## 2026-09-08 - Companies removed: sidequest is one entity type again
+
+Ripped the companies feature out entirely. It leaves the repo with a single entity type, a single
+schema, and a noticeably smaller surface area.
+
+### Why
+
+The companies directory was always framed as "tech companies worth knowing about" - a handful of
+hand-picked entries, six of them in the end. The real dataset turned out to be a 13,000-row
+LinkedIn scrape (expected to grow toward 130k), which is a comprehensive reference dataset. That
+is the exact opposite of this repo's founding principle, and it would have made companies 98.4% of
+the repo by entry count.
+
+The architecture said the same thing independently. Measured against the actual build (218
+entries, 28.4 KB per entry page, 12 MB `dist/`, 1.5 MB Pagefind index):
+
+| | 218 | 13,000 | 130,000 |
+|---|---|---|---|
+| `dist/` | 12 MB | ~450 MB | **~3.7 GB** |
+| Pagefind index | 1.5 MB | ~90 MB | ~900 MB |
+| Build | 1.6 s | 3-5 min | 30-60 min, likely OOM |
+
+GitHub Pages has a hard 1 GB limit, so 130k is not "slow", it is undeployable. The root cause is
+one static HTML page per entry, each carrying the full mega-menu nav. That model is right for
+hundreds of entries and wrong for tens of thousands, so the companies site needs a different
+frontend architecture (no page per row) and belongs in its own repo on its own subdomain.
+
+### What was removed
+
+- `data/career/companies/**` (6 entries), `schema/company.schema.json`, `scripts/add-company.mjs`,
+  `.github/ISSUE_TEMPLATE/add-company.yml`, `site/src/pages/career/**` (3 routes), and the
+  companies collection in `content.config.ts`.
+- The `companies` half of every shared helper: `loadCollection(kind)` became `loadEntries()`,
+  `folderFor(kind, path)` became `folderFor(path)`, `buildCompany`/`COMPANY_FIELDS` are gone, and
+  `parseSubmission(kind, body)` became `parseSubmission(body)`. `issue-to-pr.yml` lost its
+  kind-dispatch step and now routes on `new-link` alone.
+- Company facets (industry, hiring status, remote policy, size) from `Browse.astro`, the Companies
+  entry in the Career mega-menu panel, the Companies section and stat on the homepage, and the
+  company links in `404.astro` / `search.astro` / `llms.txt`.
+- The 6 company entries were saved off before deletion as seed data for the new repo, and remain
+  in git history at cb9d3e5 regardless.
+
+### Two vestigial abstractions collapsed with it
+
+Both existed *only* to separate the two collections, so leaving them would have been exactly the
+kind of leftover the previous taxonomy correction was about:
+
+- **Asset namespacing.** `site/public/favicons/<kind>/<slug>.<ext>` became
+  `site/public/favicons/<slug>.<ext>` (same for covers), and the `kind` parameter is gone from
+  every function in `enrich.mjs` and from `Favicon.astro`/`Cover.astro`. 173 favicons moved as
+  clean git renames. Slugs are now unique dataset-wide, so the namespace bought nothing.
+- **The taxonomy `type` discriminator.** Every registry record was `type: links` with no other
+  possible value, so the field is gone from all 44 records and from the whole `taxonomy.mjs` API
+  (`categoriesFor(type)` / `topLevelFor(type)` / `childrenOf(type, parent)` / `checkCategory(input,
+  type, parent)` / `addCategory({type})` all lost the parameter). `normalize-slug.mjs`'s `--type`
+  flag became `--check [--parent <path>]`, which is what it actually does now.
+
+Slug uniqueness correspondingly tightened from per-collection to dataset-wide in `validate.mjs` -
+strictly stronger, so no existing entry was affected.
+
+### Verification
+
+`npm run validate` 212/212, `npm test` 89/89 (20 tests updated: they exercised the removed
+company/kind APIs, and were rewritten against the new signatures rather than deleted, except the
+country-picker test which has no equivalent any more), `astro check` 0/0/0, site builds 212 pages.
+
+Real browser, desktop and 375px mobile, both themes:
+
+- Homepage: no Companies section, stats now read entries / life domains / categories / tags.
+- Career mega-menu panel shows only its four real subcategories, and a DOM sweep for any link
+  whose href contains "compan" returns zero results sitewide.
+- `/career/companies` returns the real 404 page (the only 404 in the network log, and a deliberate
+  one).
+- `/browse` facets are Priority / Audience / Tags only; the priority chip still filters and still
+  writes `?priority=high` to the URL.
+- Favicons all load 200 from the new flat `/favicons/<slug>.<ext>` path.
+- `/entry/ghostty` renders its breadcrumb and the bidirectional alternatives relationship exactly
+  as before.
+
+### Follow-up
+
+The `new-company` repo label still exists on GitHub. Nothing routes on it any more; it is
+harmless, and deleting it is a repo-settings change left to the owner:
+`gh label delete new-company`.

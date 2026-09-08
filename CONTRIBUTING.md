@@ -22,7 +22,7 @@ forgotten is the whole point.
 
 **[→ Add an entry](https://github.com/ibtisam-iq/sidequest/issues/new/choose)**
 
-Pick *Add a link* or *Add a company*, fill in the fields, submit. This works fine from a phone.
+Fill in the fields and submit. This works fine from a phone.
 
 What happens next is automatic:
 
@@ -57,8 +57,6 @@ the issue** and it re-runs automatically - no need to open a new one.
   this goes."
 - **Tags** - comma-separated, as many as are useful. Free-form; there's no fixed list.
 - **Priority** - how strongly *you'd* recommend it. Be honest; `medium` is a fine answer.
-- **Hiring status** (companies) - leave it `Unknown` unless you're confident. It goes stale fast
-  and a wrong "actively hiring" is worse than no answer.
 
 ---
 
@@ -76,17 +74,16 @@ npm install
 
 ```bash
 npm run add-link
-npm run add-company
 ```
 
-These prompt for each field, warn you if the URL is already in the directory, fuzzy-check the
-category against the registry, write the file, and re-run validation.
+This prompts for each field, warns you if the URL is already in the directory, fuzzy-checks the
+category against the registry, writes the file, and re-runs validation.
 
 ### By hand
 
 Create a file at `data/<root>/<slug>.yaml` (or `data/<root>/<sub>/<slug>.yaml`, nested as deep as
-the category actually is - `root` being one of career/faith/finance/learning/lifestyle/technology)
-or `data/career/companies/<country>/<slug>.yaml`, then:
+the category actually is - `root` being one of career/faith/finance/learning/lifestyle/technology),
+then:
 
 ```bash
 npm run validate
@@ -105,10 +102,10 @@ problem:
 |---|---|
 | Matches the JSON Schema in `schema/` | The schema is the single source of truth for both CI and the site |
 | No duplicate URLs anywhere in the dataset | Compared after normalization, so `www.` / tracking params / trailing slashes can't sneak a duplicate past |
-| Category path (or country) resolves in `taxonomy/categories.yaml` | Stops typo'd categories creating orphan folders. For links, every segment of the path - root and however many subcategories deep it goes - must be registered under the one before it |
-| Folder path matches the entry's `category`/`country` field | The two must agree or the site routes to the wrong place |
-| Entry slug is unique **within its collection** | `alternatives` references entries by bare slug, so links must be unambiguous. A link and a company *may* share a slug |
-| `alternatives` point at real link entries | A dangling reference would silently render nothing |
+| Category path resolves in `taxonomy/categories.yaml` | Stops typo'd categories creating orphan folders. Every segment of the path - root and however many subcategories deep it goes - must be registered under the one before it |
+| Folder path matches the entry's `category` field | The two must agree or the site routes to the wrong place |
+| Entry slug is unique across the whole dataset | `alternatives` references entries by bare slug, and `/entry/<slug>` has to resolve to exactly one entry |
+| `alternatives` point at real entries | A dangling reference would silently render nothing |
 | `legal_risk: true` is set on every entry under `learning/books-academic-papers`, `lifestyle/movies-torrents`, or `technology/cracked-software-apks`, and never set elsewhere | A content-integrity rule, not a suggestion - it drives the visible warning badge |
 
 ### Two conventions worth knowing
@@ -118,8 +115,8 @@ Quoting guarantees it parses as a string across every YAML tool rather than beco
 
 **Slugs are the filename.** `data/technology/cli-terminal/ghostty.yaml` has the slug `ghostty`.
 That's what `alternatives: [ghostty]` refers to. An entry's own URL is `/entry/ghostty` - the
-category path doesn't factor in there either, since slugs only need to be unique within their
-collection. A *category's* URL is its category path verbatim, e.g. `/technology/cli-terminal`.
+category path doesn't factor in there, since slugs are unique across the whole dataset. A
+*category's* URL is its category path verbatim, e.g. `/technology/cli-terminal`.
 
 ---
 
@@ -133,24 +130,19 @@ on. They live in [`taxonomy/categories.yaml`](taxonomy/categories.yaml):
 ```yaml
 - slug: technology
   name: Technology
-  type: links      # links | companies
 
 - slug: dev-tools
   name: Dev Tools
-  type: links
   parent: technology  # makes this a subcategory of technology
 
 - slug: kubernetes
   name: Kubernetes
-  type: links
   parent: technology/dev-tools  # nested one level deeper still
 ```
 
 `parent` is the **full path** of the immediate parent, not just its bare slug - for a root-level
-subcategory that's just the root, as in the `dev-tools` example above. A link's `category` field
-is that same path: `technology` (flat), `technology/dev-tools`, or deeper. For **companies** the
-registry key is the **country**, and it's always flat - industry is deliberately free-form and not
-registered, because companies vary too widely for a curated list to be worth maintaining.
+subcategory that's just the root, as in the `dev-tools` example above. An entry's `category` field
+is that same path: `technology` (flat), `technology/dev-tools`, or deeper.
 
 In practice, most categories stay one or two levels deep - only add a third when a specific
 subcategory genuinely outgrows a flatter shape, not by default. The site's nav only ever shows a
@@ -231,12 +223,11 @@ token, otherwise it will break in one of the two themes.
 Two things aren't carried over by a fork and will silently break the issue-form pipeline until you
 set them up:
 
-1. **The labels.** The forms apply `new-link` / `new-company` and the workflow routes on them, but
-   GitHub doesn't create them from the form definition:
+1. **The labels.** The form applies `new-link` and the workflow routes on it, but GitHub doesn't
+   create it from the form definition:
 
    ```bash
-   gh label create new-link     --color 1D76DB --description "Issue-form submission for a new link entry"
-   gh label create new-company  --color 0E8A16 --description "Issue-form submission for a new company entry"
+   gh label create new-link     --color 1D76DB --description "Issue-form submission for a new entry"
    gh label create automated-pr --color 5319E7 --description "PR opened automatically from an issue form"
    ```
 

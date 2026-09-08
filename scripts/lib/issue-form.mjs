@@ -1,4 +1,4 @@
-import { slugify, slugifyList, isValidSlug, slugifyCategoryPath } from './slugify.mjs';
+import { slugify, slugifyList, slugifyCategoryPath } from './slugify.mjs';
 import { normalizeUrl } from './url.mjs';
 import { LEGAL_RISK_REQUIRED_CATEGORIES } from './taxonomy.mjs';
 
@@ -50,33 +50,17 @@ const LINK_FIELDS = {
   alternatives: 'alternatives',
 };
 
-const COMPANY_FIELDS = {
-  'company name': 'name',
-  website: 'website',
-  country: 'country',
-  industry: 'industry',
-  'careers url': 'careers_url',
-  'hiring status': 'hiring_status',
-  size: 'size',
-  'remote policy': 'remote_policy',
-  'why is it notable?': 'rating',
-  tags: 'tags',
-};
-
 const PRIORITIES = new Set(['high', 'medium', 'low']);
-const HIRING = new Set(['actively-hiring', 'unknown', 'not-hiring']);
-const SIZES = new Set(['startup', 'mid', 'enterprise']);
-const REMOTE = new Set(['remote', 'hybrid', 'onsite', 'unknown']);
 
 const splitList = (value) => slugifyList((value ?? '').split(/[,\n]/));
 
-/** Dropdown values arrive as their human label, e.g. "Actively hiring". */
+/** Dropdown values arrive as their human label, e.g. "High". */
 const pickEnum = (value, allowed, fallback) => {
   const slug = slugify(value ?? '');
   return allowed.has(slug) ? slug : fallback;
 };
 
-function buildLink(fields, { author, today }) {
+function buildEntry(fields, { author, today }) {
   const errors = [];
   const get = (key) => (fields.get(key) ?? '').trim();
 
@@ -129,95 +113,27 @@ function buildLink(fields, { author, today }) {
     ...(note && { note }),
   };
 
-  return { kind: 'links', entry, group: category, slug: slugify(title), errors };
+  return { entry, group: category, slug: slugify(title), errors };
 }
 
-function buildCompany(fields, { today }) {
-  const errors = [];
-  const get = (key) => (fields.get(key) ?? '').trim();
-
-  const rawSite = get('website');
-  let website = '';
-  try {
-    website = normalizeUrl(rawSite);
-  } catch {
-    errors.push(`"${rawSite || '(empty)'}" is not a valid website URL.`);
-  }
-
-  const name = get('name');
-  if (!name) errors.push('Company name is required.');
-
-  const country = slugify(get('country'));
-  if (!isValidSlug(country)) errors.push('Country is required.');
-
-  const industry = slugify(get('industry'));
-  if (!isValidSlug(industry)) errors.push('Industry is required.');
-
-  let careersUrl = '';
-  const rawCareers = get('careers_url');
-  if (rawCareers) {
-    try {
-      careersUrl = normalizeUrl(rawCareers);
-    } catch {
-      errors.push(`"${rawCareers}" is not a valid careers URL.`);
-    }
-  }
-
-  const size = pickEnum(get('size'), SIZES, '');
-  const rating = get('rating');
-  const tags = splitList(get('tags'));
-
-  const entry = {
-    name,
-    website,
-    country,
-    industry,
-    ...(size && { size }),
-    remote_policy: pickEnum(get('remote_policy'), REMOTE, 'unknown'),
-    hiring_status: pickEnum(get('hiring_status'), HIRING, 'unknown'),
-    ...(careersUrl && { careers_url: careersUrl }),
-    ...(tags.length && { tags }),
-    ...(rating && { rating }),
-    date_added: today,
-    source: 'issue-form',
-  };
-
-  return { kind: 'companies', entry, group: country, slug: slugify(name), errors };
-}
 
 /**
- * @param kind   'links' | 'companies'
  * @param body   raw issue body markdown
  * @param today  ISO date string, injected so the result is deterministic in tests
+ *
+ * An empty `slug` in the result is not an error here: it usually just means a genuinely blank
+ * Title waiting on parse-issue-form.mjs's page-fetch enrichment step, so that check happens
+ * there instead, after enrichment has had a chance to fill the title in.
  */
-export function parseSubmission(kind, body, { author = '', today } = {}) {
-  if (kind !== 'links' && kind !== 'companies') {
-    throw new Error(`Unknown submission kind: ${kind}`);
-  }
-
+export function parseSubmission(body, { author = '', today } = {}) {
   const labels = parseIssueBody(body);
-  const map = kind === 'links' ? LINK_FIELDS : COMPANY_FIELDS;
 
   // Re-key from the human-readable form labels onto schema field names.
   const fields = new Map();
   for (const [label, value] of labels) {
-    const field = map[label];
+    const field = LINK_FIELDS[label];
     if (field) fields.set(field, value);
   }
 
-  const result =
-    kind === 'links'
-      ? buildLink(fields, { author, today })
-      : buildCompany(fields, { author, today });
-
-  // For companies, name is always typed - an empty slug here means it genuinely couldn't be
-  // slugified (e.g. non-Latin text with no fallback), so it's a real error. For links, an empty
-  // slug just as often means a genuinely blank Title waiting on parse-issue-form.mjs's page-fetch
-  // enrichment step, so that check happens there instead, after enrichment has had a chance to
-  // fill the title in.
-  if (!result.slug && kind === 'companies') {
-    result.errors.push('Could not derive a filename from the company name.');
-  }
-
-  return result;
+  return buildEntry(fields, { author, today });
 }

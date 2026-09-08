@@ -5,12 +5,9 @@ interface Props {
   tree: CategoryNode[];
   currentParent: string | null;
   currentSub: string | null;
-  /** True when the current page is the companies feature, nested under Career. */
-  onCompanies?: boolean;
-  companiesCount: number;
 }
 
-const { tree, currentParent, currentSub, onCompanies = false, companiesCount } = Astro.props;
+const { tree, currentParent, currentSub } = Astro.props;
 
 // The six roots are fixed and always shown alphabetically - no ranking by count, ever. This is
 // the primary site nav now, not a secondary in-page widget, so its order has to be as stable and
@@ -27,17 +24,14 @@ const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
     </li>
     {
       sorted.map((parent) => {
-        const isCareer = parent.slug === 'career';
-        const hasPanel = parent.children.length > 0 || isCareer;
+        const hasPanel = parent.children.length > 0;
         return (
           <li class="mega-item" class:list={{ 'has-children': hasPanel }}>
             <span class="mega-trigger-wrap">
               <a
                 href={`/${parent.path}`}
                 class="mega-trigger"
-                aria-current={
-                  currentParent === parent.slug && !currentSub && !onCompanies ? 'page' : undefined
-                }
+                aria-current={currentParent === parent.slug && !currentSub ? 'page' : undefined}
               >
                 {parent.name}
                 <span class="count">{parent.count}</span>
@@ -59,18 +53,6 @@ const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
             {hasPanel && (
               <div class="mega-panel">
                 <ul>
-                  {isCareer && (
-                    <li>
-                      <a
-                        href="/career/companies"
-                        class="mega-companies"
-                        aria-current={onCompanies ? 'page' : undefined}
-                      >
-                        Companies
-                        <span class="count">{companiesCount}</span>
-                      </a>
-                    </li>
-                  )}
                   {parent.children.map((child) => (
                     <li>
                       <a
@@ -254,27 +236,6 @@ const sorted = [...tree].sort((a, b) => a.name.localeCompare(b.name));
   .mega-panel a:hover {
     background: var(--bg-subtle);
     color: var(--fg);
-  }
-
-  /* Companies isn't a real subcategory - it's a whole other collection surfaced here as a
-     feature of Career - so it gets its own visual weight and a divider before the real
-     subcategories start. */
-  .mega-companies {
-    color: var(--company);
-    font-weight: 620;
-    border-bottom: 1px solid var(--border);
-    border-radius: 0;
-    margin-bottom: var(--sp-1);
-    padding-bottom: var(--sp-3);
-  }
-
-  .mega-companies:hover {
-    color: var(--company);
-    background: var(--company-bg);
-  }
-
-  .mega-companies[aria-current='page'] {
-    background: var(--company-bg);
   }
 
   .mega-panel a[aria-current='page'] {

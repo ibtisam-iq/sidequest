@@ -57,7 +57,7 @@ test('every add-link form field is understood by the parser', async () => {
     'a form field is missing from this test fixture',
   );
 
-  const { entry, errors } = parseSubmission('links', renderIssueBody(form, answers), {
+  const { entry, errors } = parseSubmission(renderIssueBody(form, answers), {
     author: 'octocat',
     today: TODAY,
   });
@@ -73,62 +73,12 @@ test('every add-link form field is understood by the parser', async () => {
   assert.deepEqual(entry.alternatives, ['warp']);
 });
 
-test('every add-company form field is understood by the parser', async () => {
-  const form = await loadForm('add-company.yml');
-
-  const answers = {
-    'Company name': 'Contract Test Co',
-    Website: 'https://contract.example',
-    Country: 'Pakistan',
-    Industry: 'SaaS',
-    'Careers URL': 'https://contract.example/jobs',
-    'Hiring status': 'Actively hiring',
-    Size: 'Mid',
-    'Remote policy': 'Hybrid',
-    'Why is it notable?': 'Because it is a test.',
-    Tags: 'testing',
-  };
-
-  const labels = form.body.filter((f) => f.type !== 'markdown').map((f) => f.attributes.label);
-  assert.deepEqual(
-    labels.filter((l) => !(l in answers)),
-    [],
-    'a form field is missing from this test fixture',
-  );
-
-  const { entry, errors } = parseSubmission('companies', renderIssueBody(form, answers), {
-    today: TODAY,
-  });
-
-  assert.deepEqual(errors, []);
-  assert.equal(entry.name, 'Contract Test Co');
-  assert.equal(entry.country, 'pakistan');
-  assert.equal(entry.industry, 'saas');
-  assert.equal(entry.careers_url, 'https://contract.example/jobs');
-  assert.equal(entry.hiring_status, 'actively-hiring');
-  assert.equal(entry.size, 'mid');
-  assert.equal(entry.remote_policy, 'hybrid');
-  assert.equal(entry.rating, 'Because it is a test.');
-  assert.deepEqual(entry.tags, ['testing']);
-});
-
 test('every dropdown option maps to a real schema enum value', async () => {
   // A dropdown option that does not slugify onto an allowed value gets silently discarded
   // (or defaulted), which is exactly the kind of thing nobody notices until the data is wrong.
-  const cases = [
-    ['add-link.yml', 'links', { Priority: ['high', 'medium', 'low'] }],
-    [
-      'add-company.yml',
-      'companies',
-      {
-        'Hiring status': ['actively-hiring', 'unknown', 'not-hiring'],
-        Size: ['startup', 'mid', 'enterprise'],
-        'Remote policy': ['remote', 'hybrid', 'onsite', 'unknown'],
-      },
-    ],
-  ];
+  const cases = [['add-link.yml', { Priority: ['high', 'medium', 'low'] }]];
 
-  for (const [file, , expected] of cases) {
+  for (const [file, expected] of cases) {
     const form = await loadForm(file);
     for (const field of form.body) {
       if (field.type !== 'dropdown') continue;
@@ -147,7 +97,6 @@ test('every dropdown option maps to a real schema enum value', async () => {
   }
 });
 
-test('the forms apply the labels the workflow routes on', async () => {
+test('the form applies the label the workflow routes on', async () => {
   assert.deepEqual((await loadForm('add-link.yml')).labels, ['new-link']);
-  assert.deepEqual((await loadForm('add-company.yml')).labels, ['new-company']);
 });

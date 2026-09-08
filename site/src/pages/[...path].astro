@@ -15,8 +15,8 @@ import type { CardItem } from '../lib/data';
  * any - its children as a clickable grid, exactly like a folder view. A leaf category (no
  * children) just shows entries.
  *
- * More specific static routes (career/companies/**, entry/[slug], browse, search, ...) always
- * win over this catch-all, so there is no collision with them.
+ * More specific static routes (entry/[slug], browse, search, ...) always win over this
+ * catch-all, so there is no collision with them.
  */
 export const getStaticPaths = (async () => {
   const PAGE_SIZE = 24;
@@ -24,7 +24,6 @@ export const getStaticPaths = (async () => {
 
   const byExactPath = new Map<string, CardItem[]>();
   for (const item of items) {
-    if (item.type !== 'link') continue;
     const bucket = byExactPath.get(item.group);
     if (bucket) bucket.push(item);
     else byExactPath.set(item.group, [item]);

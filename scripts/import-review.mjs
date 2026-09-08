@@ -26,7 +26,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import { load, dump } from 'js-yaml';
-import { REPO_ROOT, writeYaml, loadCollection } from './lib/yaml-io.mjs';
+import { REPO_ROOT, writeYaml, loadEntries } from './lib/yaml-io.mjs';
 import { slugify, slugifyList, isValidSlug } from './lib/slugify.mjs';
 import { normalizeUrl } from './lib/url.mjs';
 import { fetchFaviconForEntry, fetchCoverForEntry, cacheCoverFromUrl } from './lib/enrich.mjs';
@@ -78,17 +78,17 @@ function titleForFilename(item) {
 }
 
 async function writeApproved(item) {
-  const { filePath, slug } = resolveEntryPath('links', item.category, titleForFilename(item));
+  const { filePath, slug } = resolveEntryPath(item.category, titleForFilename(item));
   const entry = toEntry(item);
   await writeYaml(filePath, entry);
 
-  const favicon = await fetchFaviconForEntry('links', slug, entry.url);
+  const favicon = await fetchFaviconForEntry(slug, entry.url);
   // A raindrop-sourced cover was captured at the moment the link was originally saved, which is
   // more reliable than fetching a live page that may have changed or gone offline since - prefer
   // it over a fresh og:image fetch whenever the CSV actually had one.
   const cover = entry.image
-    ? await cacheCoverFromUrl('links', slug, entry.image)
-    : await fetchCoverForEntry('links', slug, entry.url);
+    ? await cacheCoverFromUrl(slug, entry.image)
+    : await fetchCoverForEntry(slug, entry.url);
   return {
     filePath: path.relative(REPO_ROOT, filePath),
     favicon: favicon.status,
@@ -142,7 +142,7 @@ async function runInteractive(items) {
       continue;
     }
     if (action === 'edit') {
-      item.category = await pickCategory('links');
+      item.category = await pickCategory();
     }
     if (!item.category || !isValidSlug(item.category.split('/')[0])) {
       p.log.error('No valid category set - skipping, still in review.yaml.');
@@ -206,7 +206,7 @@ async function main() {
   // failure - or just running twice - can never write the same URL under two different
   // filenames: resolveEntryPath only avoids colliding on an identical slug, not on the URL.
   const known = new Map();
-  for (const e of await loadCollection('links')) {
+  for (const e of await loadEntries()) {
     try {
       known.set(normalizeUrl(e.data.url), e.relPath);
     } catch {}

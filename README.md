@@ -10,8 +10,7 @@ exhaustive. Never LinkedIn, YouTube, Google, or anything a typical person in the
 already know about.
 
 [**sidequest.ibtisam-iq.com**](https://sidequest.ibtisam-iq.com) ·
-[Browse links](https://sidequest.ibtisam-iq.com/browse) ·
-[Companies](https://sidequest.ibtisam-iq.com/career/companies) ·
+[Browse](https://sidequest.ibtisam-iq.com/browse) ·
 [Add an entry](https://github.com/ibtisam-iq/sidequest/issues/new/choose)
 
 [![Validate](https://github.com/ibtisam-iq/sidequest/actions/workflows/validate.yml/badge.svg)](https://github.com/ibtisam-iq/sidequest/actions/workflows/validate.yml)
@@ -42,15 +41,14 @@ Every entry is a **flat YAML file in git**. There is no database and no accounts
 disappears tomorrow, the data is still a folder of readable text files you can grep, fork, or
 import somewhere else.
 
-Links are organized under **six fixed life-domain roots** - Career, Faith, Finance, Learning,
+Entries are organized under **six fixed life-domain roots** - Career, Faith, Finance, Learning,
 Lifestyle, Technology - always shown alphabetically, each with open subcategories underneath, to
 any depth. A category page's URL is its category path with no prefix, e.g.
-`/technology/ai-coding-agents`. Companies are a feature of Career (`/career/companies`), not a
-separate top-level section, and live nested under it on disk too.
+`/technology/ai-coding-agents`.
 
-## Two kinds of entry
+## What an entry looks like
 
-**Links** - anything worth saving: a tool, a repo, an article, a course, a community, a job board.
+Anything worth saving: a tool, a repo, an article, a course, a community, a job board.
 
 ```yaml
 # data/technology/cli-terminal/ghostty.yaml
@@ -66,26 +64,6 @@ date_added: "2026-08-18"
 source: local
 ```
 
-**Companies** - a proper directory, not just a link, because companies need country, industry and
-hiring filters that a tool entry has no use for. Surfaced on the site as a Career feature
-(`/career/companies`), but the schema and data folder are unaffected by that.
-
-```yaml
-# data/career/companies/pakistan/arbisoft.yaml
-name: Arbisoft
-website: https://arbisoft.com
-country: pakistan
-industry: software-development
-size: mid
-remote_policy: hybrid
-hiring_status: actively-hiring
-rating: Lahore-based product engineering firm known for long-running partnerships.
-date_added: "2026-07-11"
-source: local
-```
-
-Starting with Pakistan and expanding to the US, Canada and remote-friendly companies as the
-research grows.
 
 ## A few things it does
 
@@ -94,10 +72,11 @@ research grows.
   so a filtered view is linkable.
 - **Alternatives, both ways.** An entry lists similar tools, and the relationship shows up on both
   entries - if A names B, B's page shows A without anyone having to write it twice.
-- **Six fixed roots, open subcategories.** Categories are `root` or `root/sub` (technology,
-  technology/ai-coding-agents) under one of Career, Faith, Finance, Learning, Lifestyle,
-  Technology - the roots never change, but subcategories grow, with fuzzy matching scoped to
-  siblings so `ai-chat-assistant` and `ai-chat-assistants` can't both exist under the same root.
+- **Six fixed roots, open subcategories.** Categories are `root`, `root/sub`, or deeper
+  (technology, technology/ai-coding-agents) under one of Career, Faith, Finance, Learning,
+  Lifestyle, Technology - the roots never change, but subcategories grow, with fuzzy matching
+  scoped to siblings so `ai-chat-assistant` and `ai-chat-assistants` can't both exist under the
+  same root.
 - **A legal-risk disclosure.** Shadow-library-style entries are filed by content type under
   whichever root fits, carrying a visible warning badge and a `legal_risk: true` flag that
   validation enforces both ways - required where it applies, rejected everywhere else.
@@ -128,8 +107,7 @@ npm install
 Working with the data:
 
 ```bash
-npm run add-link          # guided prompt for a new link
-npm run add-company       # guided prompt for a new company
+npm run add-link          # guided prompt for a new entry
 npm run validate          # validate the whole dataset (same script CI runs)
 npm run validate -- --report   # ...plus per-category counts
 npm test                  # unit tests for the shared helpers
@@ -151,12 +129,11 @@ npm run preview           # serve the built output
 ## Repo layout
 
 ```
-data/<root>[/<sub>/<sub>/...]/<slug>.yaml       root is one of the six fixed life-domain roots,
-                                                depth below it is unbounded
-data/career/companies/<country>/<slug>.yaml    nested under Career, companies stay flat
-taxonomy/categories.yaml                 the open category/country registry
-schema/*.json                           JSON Schema - the source of truth for validation
-scripts/                                validation, the CLIs, shared helpers
+data/<root>[/<sub>/<sub>/...]/<slug>.yaml   root is one of the six fixed life-domain roots,
+                                            depth below it is unbounded
+taxonomy/categories.yaml                 the open category registry
+schema/link.schema.json                  JSON Schema - the source of truth for validation
+scripts/                                 validation, the CLI, shared helpers
 site/                                   the Astro site
 .github/                                issue forms and workflows
 ```
@@ -169,9 +146,8 @@ fits together. [STATUS.md](STATUS.md) is the build log.
 Astro (static output) · Pagefind for search · plain YAML for data · Node scripts for validation ·
 GitHub Actions · GitHub Pages. No database, no framework runtime, no tracking.
 
-The JSON Schemas are the single source of truth: `scripts/validate.mjs` enforces them with ajv in
-CI and locally, and the site's Zod schemas are generated from the same files, so the two can't
-drift.
+The JSON Schema is the single source of truth: `scripts/validate.mjs` enforces it with ajv in CI
+and locally, and the site's Zod schema is generated from the same file, so the two can't drift.
 
 ## License
 

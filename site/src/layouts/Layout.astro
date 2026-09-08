@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import MegaMenu from '../components/MegaMenu.astro';
-import { getData, getLinkCategoryTree } from '../lib/data';
+import { getLinkCategoryTree } from '../lib/data';
 
 interface Props {
   title: string;
@@ -24,19 +24,15 @@ const path = Astro.url.pathname;
 // The mega-menu is the primary site nav on every page now, not a widget scoped to /links - so
 // it lives here, and figures out which root/subcategory (if any) the current page belongs to
 // from the URL alone rather than every page having to pass that down explicitly.
-const [tree, data] = await Promise.all([getLinkCategoryTree(), getData()]);
+const tree = await getLinkCategoryTree();
 
-// The six root slugs are the only valid first path segment for a category page (companies,
-// search, browse, entry, etc. all live at other top-level paths and never collide with one).
+// The six root slugs are the only valid first path segment for a category page (browse, search,
+// entry, etc. all live at other top-level paths and never collide with one).
 const ROOT_SLUGS = new Set(tree.map((c) => c.slug));
-const onCompanies = path.startsWith('/career/companies');
 const categoryMatch = path.match(/^\/([^/]+)(?:\/([^/]+))?/);
-const currentParent = onCompanies
-  ? 'career'
-  : categoryMatch && ROOT_SLUGS.has(categoryMatch[1])
-    ? categoryMatch[1]
-    : null;
-const currentSub = onCompanies || !currentParent ? null : (categoryMatch?.[2] ?? null);
+const currentParent =
+  categoryMatch && ROOT_SLUGS.has(categoryMatch[1]) ? categoryMatch[1] : null;
+const currentSub = currentParent ? (categoryMatch?.[2] ?? null) : null;
 ---
 
 <!doctype html>
@@ -113,13 +109,7 @@ const currentSub = onCompanies || !currentParent ? null : (categoryMatch?.[2] ??
         </div>
       </div>
 
-      <MegaMenu
-        tree={tree}
-        currentParent={currentParent}
-        currentSub={currentSub}
-        onCompanies={onCompanies}
-        companiesCount={data.companies.length}
-      />
+      <MegaMenu tree={tree} currentParent={currentParent} currentSub={currentSub} />
     </header>
 
     <main id="main">
@@ -189,7 +179,7 @@ const currentSub = onCompanies || !currentParent ? null : (categoryMatch?.[2] ??
     width: 18px;
     height: 18px;
     border-radius: 5px;
-    background: linear-gradient(135deg, var(--accent), var(--company));
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
     box-shadow: var(--shadow-sm);
   }
 

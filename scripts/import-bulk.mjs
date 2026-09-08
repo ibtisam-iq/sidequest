@@ -20,7 +20,7 @@ import { dump } from 'js-yaml';
 import { parseCsvRecords } from './lib/csv.mjs';
 import { normalizeUrl } from './lib/url.mjs';
 import { slugify } from './lib/slugify.mjs';
-import { loadCollection, REPO_ROOT } from './lib/yaml-io.mjs';
+import { loadEntries, REPO_ROOT } from './lib/yaml-io.mjs';
 import { guessCategory } from './lib/import-heuristics.mjs';
 import { isExcluded } from './lib/import-exclusions.mjs';
 
@@ -134,22 +134,16 @@ async function main() {
     process.exit(1);
   }
 
-  const [csvRows, urlRows, existingLinks, existingCompanies] = await Promise.all([
+  const [csvRows, urlRows, existing] = await Promise.all([
     args.csv ? readCsvRows(args.csv) : [],
     args.urls ? readUrlListRows(args.urls) : [],
-    loadCollection('links'),
-    loadCollection('companies'),
+    loadEntries(),
   ]);
 
   const known = new Map();
-  for (const e of existingLinks) {
+  for (const e of existing) {
     try {
       known.set(normalizeUrl(e.data.url), e.relPath);
-    } catch {}
-  }
-  for (const e of existingCompanies) {
-    try {
-      known.set(normalizeUrl(e.data.website), e.relPath);
     } catch {}
   }
 

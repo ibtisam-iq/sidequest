@@ -20,11 +20,11 @@ const host = (() => {
 })();
 ---
 
-<article class="card" data-type={item.type}>
-  <Cover slug={item.slug} kind={item.type === 'link' ? 'links' : 'companies'} alt="" />
+<article class="card">
+  <Cover slug={item.slug} alt="" />
 
   <div class="card-top">
-    <Favicon slug={item.slug} kind={item.type === 'link' ? 'links' : 'companies'} title={item.title} size={28} />
+    <Favicon slug={item.slug} title={item.title} size={28} />
 
     <div class="head">
       <h3>
@@ -35,7 +35,6 @@ const host = (() => {
 
     <div class="flags">
       {item.isNew && <span class="badge badge-new">New</span>}
-      {item.type === 'company' && <span class="badge badge-company">Company</span>}
     </div>
   </div>
 
@@ -51,24 +50,11 @@ const host = (() => {
 
   <div class="meta">
     {!hideGroup && (
-      <a
-        class="pill pill-group"
-        href={item.type === 'link' ? `/${item.group}` : `/career/companies/${item.group}`}
-      >
+      <a class="pill pill-group" href={`/${item.group}`}>
         {item.groupName}
       </a>
     )}
     {item.priority && <span class={`pill pill-priority p-${item.priority}`}>{item.priority}</span>}
-    {item.industry && <span class="pill">{item.industry.replace(/-/g, ' ')}</span>}
-    {
-      item.hiring_status === 'actively-hiring' && (
-        <span class="pill pill-hiring">
-          <span class="dot" aria-hidden="true" />
-          hiring
-        </span>
-      )
-    }
-    {item.remote_policy && item.remote_policy !== 'unknown' && <span class="pill">{item.remote_policy}</span>}
     {item.tags.slice(0, 3).map((tag) => <span class="pill pill-tag">#{tag}</span>)}
   </div>
 </article>
@@ -100,10 +86,6 @@ const host = (() => {
     border-color: var(--accent-border);
     box-shadow: var(--shadow);
     transform: translateY(-2px);
-  }
-
-  .card[data-type='company']:hover {
-    border-color: var(--company-border);
   }
 
   .card-top {
@@ -187,12 +169,6 @@ const host = (() => {
     color: var(--accent-fg);
   }
 
-  .badge-company {
-    background: var(--company-bg);
-    color: var(--company);
-    border: 1px solid var(--company-border);
-  }
-
   .legal-risk {
     position: relative;
     z-index: 1;
@@ -260,19 +236,4 @@ const host = (() => {
     color: var(--priority-low);
   }
 
-  .pill-hiring {
-    background: var(--hiring-bg);
-    color: var(--hiring);
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
 </style>

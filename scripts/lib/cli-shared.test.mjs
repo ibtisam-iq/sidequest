@@ -1,7 +1,7 @@
 /**
  * Exercises the interactive category picker without a TTY by mocking the prompt layer.
  *
- * Links are now a two-level pick (one of the six life-domain roots, then optionally one of its
+ * A category is a two-level pick (one of the six life-domain roots, then optionally one of its
  * subcategories), and the fuzzy "did you mean" check must be scoped to siblings at whichever
  * level is being picked - that scoping is the whole reason "AI Chat Assistant" (singular) never
  * gets compared against a subcategory of a different root just because both happen to be
@@ -32,7 +32,7 @@ const CREATED_DIRS = [
   ['job-boards'],
   ['sandbox-flat-test'],
   ['technology', 'ai-benchmarks'],
-].map((segments) => path.join(REPO_ROOT, 'data', 'links', ...segments));
+].map((segments) => path.join(REPO_ROOT, 'data', ...segments));
 
 let taxonomySnapshot;
 
@@ -87,7 +87,7 @@ before(async () => {
   // taxonomy lib, bypassing the mocked picker - all six real roots (career, faith, finance,
   // learning, lifestyle, technology) now have subcategories, so there is no longer a naturally
   // flat existing top-level to exercise the "choosing none" path against.
-  await addCategory({ slug: 'sandbox-flat-test', name: 'Sandbox Flat Test', type: 'links' });
+  await addCategory({ slug: 'sandbox-flat-test', name: 'Sandbox Flat Test' });
 });
 
 after(async () => {
@@ -97,19 +97,19 @@ after(async () => {
 
 test('an existing top-level category with an existing subcategory resolves to the full path', async () => {
   setScript({ select: ['technology', 'ai-coding-agents'] });
-  assert.equal(await pickCategory('links'), 'technology/ai-coding-agents');
+  assert.equal(await pickCategory(), 'technology/ai-coding-agents');
   assert.equal(scripted.textCalls, 0, 'picking two existing entries needs no free text at all');
 });
 
 test('choosing "none" under an existing flat category returns just the parent slug', async () => {
   setScript({ select: ['sandbox-flat-test', '__none__'] });
-  assert.equal(await pickCategory('links'), 'sandbox-flat-test');
+  assert.equal(await pickCategory(), 'sandbox-flat-test');
 });
 
 test('warns when a new top-level category is a near-duplicate of an existing one', async () => {
   setScript({ select: ['__new__', 'career', '__none__'], text: ['Careers'] });
 
-  const result = await pickCategory('links');
+  const result = await pickCategory();
 
   assert.equal(result, 'career', 'accepting the suggestion should return the existing slug');
   assert.equal(scripted.warnings.length, 1, 'exactly one near-duplicate warning should be shown');
@@ -123,7 +123,7 @@ test('lets the user override the suggestion when the top-level category is genui
     text: ['Careers', 'Careers'],
   });
 
-  const result = await pickCategory('links');
+  const result = await pickCategory();
 
   assert.equal(result, 'careers', 'overriding should keep the slug the user typed');
   assert.equal(scripted.warnings.length, 1, 'the warning should still have been shown first');
@@ -132,7 +132,7 @@ test('lets the user override the suggestion when the top-level category is genui
 test('no warning for a genuinely new top-level category', async () => {
   setScript({ select: ['__new__', '__none__'], text: ['Podcasts', 'Podcasts'] });
 
-  const result = await pickCategory('links');
+  const result = await pickCategory();
 
   assert.equal(result, 'podcasts');
   assert.deepEqual(scripted.warnings, [], 'a distinct category must not be flagged as a typo');
@@ -148,7 +148,7 @@ test('a new subcategory is fuzzy-checked only against siblings of the same paren
     text: ['AI Chat Assistant'],
   });
 
-  const result = await pickCategory('links');
+  const result = await pickCategory();
 
   assert.equal(result, 'technology/ai-chat-assistants');
   assert.equal(scripted.warnings.length, 1);
@@ -161,7 +161,7 @@ test('creating a new subcategory registers it and creates the nested folder', as
     text: ['AI Benchmarks', 'AI Benchmarks'],
   });
 
-  const result = await pickCategory('links');
+  const result = await pickCategory();
 
   assert.equal(result, 'technology/ai-benchmarks');
   const written = await readFile(TAXONOMY, 'utf8');
@@ -176,7 +176,7 @@ test('a new top-level category is never fuzzy-matched against an unrelated subca
   // top-level category is textually close to "job-boards".
   setScript({ select: ['__new__', '__none__'], text: ['Job Boards', 'Job Boards'] });
 
-  const result = await pickCategory('links');
+  const result = await pickCategory();
 
   assert.equal(result, 'job-boards', 'a distinct top-level category, not the existing subcategory path');
   assert.deepEqual(
@@ -189,14 +189,8 @@ test('a new top-level category is never fuzzy-matched against an unrelated subca
 test('selecting two existing entries skips the new-category flow entirely', async () => {
   setScript({ select: ['technology', 'cli-terminal'] });
 
-  assert.equal(await pickCategory('links'), 'technology/cli-terminal');
+  assert.equal(await pickCategory(), 'technology/cli-terminal');
   assert.equal(scripted.selectCalls, 2, 'top-level pick + subcategory pick, nothing else');
   assert.deepEqual(scripted.warnings, []);
 });
 
-test('company countries stay a single flat pick, fuzzy-checked against the companies registry', async () => {
-  setScript({ select: ['__new__', 'pakistan'], text: ['Pakistn'] });
-
-  assert.equal(await pickCategory('companies'), 'pakistan');
-  assert.match(scripted.warnings[0], /pakistan/);
-});

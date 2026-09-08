@@ -33,9 +33,15 @@ Don't re-flag them or propose removing them; do apply the rule to everything new
 
 **sidequest** is an open-source, git-backed personal directory for saving anything interesting
 found while browsing: tools, GitHub repos, articles, books, courses, communities, remote job
-boards, referral links - plus a **companies** feature (tech companies worth knowing about,
-organized by country, starting with Pakistan and expanding to US/Canada/remote), nested under the
-Career section of the site rather than sitting as its own top-level entity type in the nav.
+boards, referral links - anything worth rescuing from being forgotten.
+
+There is exactly **one entity type**. A companies directory used to live here as a second entity
+type nested under Career; it was removed once the real company dataset turned out to be a
+13,000-row systematic scrape rather than a handful of hand-picked entries. That is a
+comprehensive reference dataset, which is the opposite of this project's founding principle, and
+at that scale the page-per-entry static model breaks outright (130k entries would be ~3.7GB of
+HTML against GitHub Pages' 1GB limit). It lives in its own repository on its own subdomain
+instead. Do not reintroduce a second entity type here.
 
 Inspiration is Awesome Lists and free-for.dev, but the comparison stops at mechanics - those
 projects aim for comprehensiveness within a niche; sidequest deliberately does not, per the
@@ -77,15 +83,12 @@ package.json       root: deps for scripts/ only (ajv, js-yaml, @clack/prompts, .
 data/
   <root-slug>[/<sub-slug>/<sub-slug>/...]/<entry-slug>.yaml   root is one of the six life-domain
                                                                roots; depth below it is unbounded
-  career/companies/<country-slug>/<company-slug>.yaml         nested under Career on disk too,
-                                                               surfaced at /career/companies
 
 taxonomy/
-  categories.yaml  the open category/country registry
+  categories.yaml  the open category registry
 
 schema/
-  link.schema.json     source of truth for link entries
-  company.schema.json  source of truth for company entries
+  link.schema.json     source of truth for every entry
 
 scripts/
   lib/                 all shared logic lives here; everything else imports it
@@ -100,7 +103,6 @@ scripts/
   normalize-slug.mjs   thin CLI wrapper over lib/slugify.mjs + lib/taxonomy.mjs
   validate.mjs         validates the whole dataset - used by CI *and* locally
   add-link.mjs         interactive local CLI (npm run add-link)
-  add-company.mjs      interactive local CLI (npm run add-company)
   gen-zod-schemas.mjs  codegen: schema/*.json -> site/src/schemas/generated/*.ts
   parse-issue-form.mjs parses a GitHub Issue Form body (used by issue-to-pr.yml)
   fetch-favicons.mjs   bulk favicon+cover cache over the whole dataset (npm run fetch-favicons)
@@ -108,32 +110,21 @@ scripts/
 site/                  the Astro project (its own package.json)
   astro.config.mjs     site: 'https://sidequest.ibtisam-iq.com'
   public/CNAME         sidequest.ibtisam-iq.com
-  public/favicons/<kind>/<slug>.<ext>   fetched by scripts/fetch-favicons.mjs, committed to git
-  public/covers/<kind>/<slug>.<ext>     same, for each entry's social-preview cover image
+  public/favicons/<slug>.<ext>   fetched by scripts/fetch-favicons.mjs, committed to git
+  public/covers/<slug>.<ext>     same, for each entry's social-preview cover image
   src/content.config.ts
   src/schemas/generated/   GENERATED - gitignored, never hand-edit
   src/lib/  src/components/  src/pages/
 
 .github/
-  ISSUE_TEMPLATE/add-link.yml  add-company.yml
+  ISSUE_TEMPLATE/add-link.yml
   PULL_REQUEST_TEMPLATE.md
   workflows/validate.yml  issue-to-pr.yml  deploy.yml
 ```
 
 ---
 
-## The two entity types
-
-They are deliberately separate because they need different filtering. A company needs
-country/industry/hiring-status facets that a generic tool entry has no use for. This is a data
-and validation distinction only - **in the site's navigation, companies are not a top-level thing
-next to the six roots**; they're a feature at `/career/companies`, since a company is itself a
-kind of career-relevant resource. On disk, companies live nested inside the Career root
-(`data/career/companies/`) rather than as a sibling top-level folder, matching where the site
-surfaces them - only the routing/folder decision changed for this, not the schema or validation
-below.
-
-### 1. Links - `data/<root-slug>[/<sub-slug>/<sub-slug>/...]/<entry-slug>.yaml`
+## The entry schema - `data/<root-slug>[/<sub-slug>/<sub-slug>/...]/<entry-slug>.yaml`
 
 Generic entries: tools, repos, articles, books, courses, communities, job boards, referral links.
 There is no `data/links/` wrapper folder - a link's file sits directly under one of the six root
@@ -144,7 +135,7 @@ path with no prefix, e.g. `/technology/ai-coding-agents`.
 |---|---|---|
 | `url` | ✔ | canonical URL |
 | `title` | ✔ | optional **to type** - if left blank when adding, auto-filled from the page's og:title/`<title>` before the entry is written; always non-empty in the committed YAML |
-| `category` | ✔ | a path into `taxonomy/categories.yaml` - `root`, `root/sub`, or deeper, to any depth; `type: links` |
+| `category` | ✔ | a path into `taxonomy/categories.yaml` - `root`, `root/sub`, or deeper, to any depth |
 | `tags` | ✔ | array, min 1, free-form, normalized lowercase-kebab |
 | `priority` | ✔ | `high` \| `medium` \| `low` |
 | `date_added` | ✔ | **quoted** ISO date, e.g. `"2026-08-22"` |
@@ -153,33 +144,14 @@ path with no prefix, e.g. `/technology/ai-coding-agents`.
 | `description` | | one-line description shown on the card; optional to type, same auto-fill-if-blank rule as `title`, from og:description/meta description |
 | `image` | | the page's og:image URL, recorded automatically when found - provenance only, not what renders; see the enrichment note below |
 | `added_by` | | GitHub username |
-| `alternatives` | | array of **link** entry-slugs; powers the two-way alternatives feature |
+| `alternatives` | | array of entry-slugs; powers the two-way alternatives feature |
 | `audience` | | free-form array: `developers`, `non-technical`, `job-seekers`, `everyone`, ... |
 | `legal_risk` | | boolean; required `true` under three specific categories - see below |
 
-### 2. Companies - `data/career/companies/<country-slug>/<company-slug>.yaml`
-
-| Field | Req | Notes |
-|---|---|---|
-| `name` | ✔ | |
-| `website` | ✔ | |
-| `country` | ✔ | normalized slug; must exist in the registry with `type: companies` |
-| `industry` | ✔ | free-form, e.g. `fintech`, `saas`, `consulting` - **not** registered |
-| `date_added` | ✔ | quoted ISO date |
-| `source` | ✔ | `local` \| `issue-form` \| `pr` |
-| `careers_url` | | |
-| `hiring_status` | | `actively-hiring` \| `unknown` \| `not-hiring` |
-| `size` | | `startup` \| `mid` \| `enterprise` |
-| `rating` | | personal note on why it's notable |
-| `tags` | | |
-| `remote_policy` | | `remote` \| `hybrid` \| `onsite` \| `unknown` |
-| `image` | | the website's og:image URL, recorded automatically when found - same provenance-only field as on links. `name` deliberately stays a typed field, not auto-filled: a company's real name isn't reliably guessable from a page `<title>` tag ("Home - Welcome to Acme"), unlike a generic link/article title |
-
-> **Relationship to the career repo.** The companies directory is conceptually adjacent to the
-> job-applications company-scraper skill in the user's separate career repo. They are deliberately
-> **separate projects** for now. Nothing here should be designed in a way that would conflict if
-> they are connected later - so keep the company schema self-describing and avoid assuming any
-> field is populated by this repo alone.
+> **Relationship to the separate companies repo.** The companies directory that used to live here
+> now has its own repository and subdomain, and is conceptually adjacent to the job-applications
+> company-scraper skill in the user's separate career repo. All three are deliberately separate
+> projects. Nothing here should assume any of them exist.
 
 ---
 
@@ -236,10 +208,8 @@ openness applies to what's underneath them.
 ```yaml
 - slug: technology
   name: Technology
-  type: links      # links | companies
 - slug: ai-coding-agents
   name: AI Coding Agents
-  type: links
   parent: technology
 ```
 
@@ -251,12 +221,9 @@ under two unrelated parents, say), because each is identified by its distinct fu
 rather than by slug alone. For a root-level category, or the common two-level case, this is
 identical to storing the bare root slug.
 
-For **links**, the registry key is the category path, to any depth. For **companies**, the
-registry key is the **country** (mirroring `data/career/companies/<country>/`); `industry` stays
-free-form and unregistered, and the companies side of the registry is completely unaffected by
-the six-root restructuring or by depth.
+The registry key is the category path, to any depth.
 
-When `add-link.mjs` / `add-company.mjs` is given a subcategory that doesn't exist yet it:
+When `add-link.mjs` is given a subcategory that doesn't exist yet it:
 
 1. normalizes it (lowercase, kebab-case);
 2. **fuzzy-matches it against its siblings only** (Levenshtein; warns at distance ≤2 or
@@ -294,22 +261,19 @@ concurrent issue-form PRs.
 - **Dates are quoted ISO strings** (`date_added: "2026-08-22"`). js-yaml 5's default YAML-1.2 CORE
   schema does not coerce timestamps; quoting makes parsing identical under js-yaml and Astro and
   matches JSON Schema `format: date`. Never write a bare unquoted date.
-- **Slug uniqueness is per collection** - unique across every link file under `data/` (excluding
-  the companies subtree), and separately unique within `data/career/companies/**`. A link and a
-  company may share a slug. `alternatives` only ever references links, so cross-collection
-  collision is harmless.
+- **Slug uniqueness is dataset-wide** - unique across every file under `data/`. That is what lets
+  `alternatives` reference an entry by bare slug and `/entry/<slug>` resolve unambiguously.
 - **`alternatives` uses bare entry slugs** (`alternatives: [obsidian]`, not `ai-tools/obsidian`),
-  which is what per-collection uniqueness buys us. The relationship is rendered **bidirectionally**:
+  which is what dataset-wide slug uniqueness buys us. The relationship is rendered **bidirectionally**:
   if A lists B, B's page also shows A. The reverse map is computed once per build from the full
   dataset.
-- **URLs have no "links" or "companies" segment.** A category page's URL is its category path
+- **URLs have no collection segment.** A category page's URL is its category path
   verbatim (`/technology/ai-coding-agents`), served by a single catch-all route
   (`site/src/pages/[...path].astro`) that resolves against `taxonomy/categories.yaml` at any
   depth - there is no per-depth route file. An entry page is `/entry/<slug>` (link slugs are
   unique dataset-wide, so this never needs the category in the URL). The "browse everything"
-  page is `/browse`, not `/links`. Companies keep their own explicit routes under
-  `/career/companies/**`, which win over the catch-all because Astro prioritises static routes
-  over a rest-parameter one.
+  page is `/browse`, not `/links`. Static routes (`/browse`, `/search`, `/entry/<slug>`) win over
+  the catch-all because Astro prioritises them over a rest-parameter route.
 - **Favicons and cover images are fetched once and committed, never requested live.**
   `scripts/lib/enrich.mjs` (what used to be `favicon.mjs`, extended) saves each entry's icon to
   `site/public/favicons/<kind>/<slug>.<ext>` and its social-preview image to
@@ -370,7 +334,6 @@ npm install              # root deps, for scripts/
 npm run validate         # validate the entire dataset
 npm run validate -- --report   # validate + print per-category entry counts
 npm run add-link         # interactive: add a link entry
-npm run add-company      # interactive: add a company entry
 npm test                 # node --test over scripts/lib pure functions
 ```
 
@@ -394,12 +357,11 @@ npm run preview          # serve the built site
 
 | Script | Purpose |
 |---|---|
-| `scripts/validate.mjs` | The gate. Validates every file in `data/**` against its JSON Schema; checks duplicate normalized URLs dataset-wide; checks each entry's category/country exists in the registry; checks `alternatives` point at real link slugs; checks per-collection slug uniqueness; checks the folder path matches the entry's `category`/`country` field. Modes: default, `--report`, `--check-duplicate-url <url>`. |
-| `scripts/add-link.mjs` | Interactive local CLI for a new link. Runs the fuzzy category check before writing, re-validates after. |
-| `scripts/add-company.mjs` | Same, for a company. |
+| `scripts/validate.mjs` | The gate. Validates every file in `data/**` against the JSON Schema; checks duplicate normalized URLs dataset-wide; checks each entry's category resolves in the registry; checks `alternatives` point at real entry slugs; checks dataset-wide slug uniqueness; checks the folder path matches the entry's `category` field. Modes: default, `--report`, `--check-duplicate-url <url>`. |
+| `scripts/add-link.mjs` | Interactive local CLI for a new entry. Runs the fuzzy category check before writing, re-validates after. |
 | `scripts/normalize-url.mjs` | CLI wrapper over `lib/url.mjs` - prints the canonical form of a URL. |
-| `scripts/normalize-slug.mjs` | CLI wrapper over `lib/slugify.mjs` + `lib/taxonomy.mjs` - normalizes and fuzzy-checks a slug. |
-| `scripts/gen-zod-schemas.mjs` | Generates the Astro zod schemas from `schema/*.json`. Runs automatically via `predev`/`prebuild`. |
+| `scripts/normalize-slug.mjs` | CLI wrapper over `lib/slugify.mjs` + `lib/taxonomy.mjs` - normalizes a slug, and with `--check` fuzzy-matches it against its siblings. |
+| `scripts/gen-zod-schemas.mjs` | Generates the Astro zod schema from `schema/link.schema.json`. Runs automatically via `predev`/`prebuild`. |
 | `scripts/parse-issue-form.mjs` | Parses a GitHub Issue Form markdown body into entry fields. Used only by `issue-to-pr.yml`. |
 | `scripts/fetch-favicons.mjs` | Fetches and caches a favicon AND a cover image for every entry that doesn't already have one, in `site/public/favicons/<kind>/<slug>.<ext>` and `site/public/covers/<kind>/<slug>.<ext>`. Concurrency-limited, skips anything already cached, never fails the build over one dead site. `--force` refetches everything. Runs in `deploy.yml` before the Astro build; a locally-added entry gets both cached immediately inside `writeAndValidate` (shared by both add CLIs) right after writing, via `scripts/lib/enrich.mjs`'s single-fetch `enrichEntry`/`fetchPageDetails`. |
 
@@ -410,7 +372,7 @@ npm run preview          # serve the built site
 | Workflow | Trigger | Does |
 |---|---|---|
 | `validate.yml` | PR touching `data/**`, `taxonomy/**`, `schema/**` | Runs `node scripts/validate.mjs`. The PR gate. |
-| `issue-to-pr.yml` | Issue opened with label `new-link` / `new-company` | Parses the form → normalizes → duplicate-checks → writes YAML → validates → opens a PR. |
+| `issue-to-pr.yml` | Issue opened with label `new-link` | Parses the form → normalizes → duplicate-checks → writes YAML → validates → opens a PR. |
 | `deploy.yml` | Push to `main` | Validates **first** (fail = stop, no deploy) → fetches and commits any uncached favicons/covers → Astro build + Pagefind → deploy to Pages. |
 
 All three shell out to the **same** `scripts/validate.mjs` a contributor runs locally, so CI and
@@ -418,15 +380,17 @@ local can't drift.
 
 ### Required repository labels
 
-The issue forms apply `new-link` / `new-company`, and `issue-to-pr.yml` routes on exactly those
-labels - so **the labels must exist in the repo or the whole pipeline silently never triggers**.
-GitHub does not create them automatically from the form definition. If you fork this repo, run:
+The issue form applies `new-link`, and `issue-to-pr.yml` routes on exactly that label - so **the
+label must exist in the repo or the whole pipeline silently never triggers**. GitHub does not
+create it automatically from the form definition. If you fork this repo, run:
 
 ```bash
-gh label create new-link     --color 1D76DB --description "Issue-form submission for a new link entry"
-gh label create new-company  --color 0E8A16 --description "Issue-form submission for a new company entry"
+gh label create new-link     --color 1D76DB --description "Issue-form submission for a new entry"
 gh label create automated-pr --color 5319E7 --description "PR opened automatically from an issue form"
 ```
+
+(The repo also still carries a now-unused `new-company` label from before the companies feature
+was removed. Harmless, and nothing routes on it any more.)
 
 ### Bot-created PRs need the checks approved once
 
@@ -471,5 +435,5 @@ copy.
 
 A green build or a passing typecheck is **not** sufficient evidence that a feature works. Site
 changes must be exercised in a real browser (desktop **and** ~375px mobile) before being called
-done: search, every filter chip, category nav, the companies facets, alternatives resolving in
-both directions, dark mode toggling and persisting without a flash, and no console errors.
+done: search, every filter chip, category nav, alternatives resolving in both directions, dark
+mode toggling and persisting without a flash, and no console errors.

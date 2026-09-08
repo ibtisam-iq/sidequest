@@ -7,22 +7,18 @@ import { load, dump } from 'js-yaml';
 export const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
 /**
- * Six fixed top-level roots. Links live directly under data/<root>[/<sub>/...]/<slug>.yaml -
- * there is no data/links/ wrapper folder. Companies are a feature of Career, not a sibling
- * top-level folder, so they live nested at data/career/companies/<country>/<slug>.yaml.
+ * Six fixed top-level roots. Entries live directly under data/<root>[/<sub>/...]/<slug>.yaml -
+ * there is no wrapper folder above the roots, and there is only one kind of entry.
  */
 export const PATHS = {
   data: path.join(REPO_ROOT, 'data'),
-  companies: path.join(REPO_ROOT, 'data', 'career', 'companies'),
   taxonomy: path.join(REPO_ROOT, 'taxonomy', 'categories.yaml'),
   schema: path.join(REPO_ROOT, 'schema'),
 };
 
-/** Where a category (any depth) or country's data folder lives on disk. */
-export function folderFor(kind, categoryPath) {
-  return kind === 'companies'
-    ? path.join(PATHS.companies, categoryPath)
-    : path.join(PATHS.data, ...categoryPath.split('/'));
+/** Where a category's data folder lives on disk, at any depth. */
+export function folderFor(categoryPath) {
+  return path.join(PATHS.data, ...categoryPath.split('/'));
 }
 
 export async function readYaml(filePath) {
@@ -50,31 +46,19 @@ export async function listYamlFiles(dir) {
 }
 
 /**
- * Load every entry of one collection with the context validation needs: the parsed data, the
- * slug (bare filename), and the category path it sits under (which must agree with the entry's
- * own category/country field).
+ * Load every entry with the context validation needs: the parsed data, the slug (bare filename),
+ * and the category path it sits under (which must agree with the entry's own `category` field).
  *
- * `categoryPath` is every directory segment between the collection root and the file, joined
- * with "/" - "pakistan" for a companies entry, "career" for a flat root-level link category,
- * "technology/dev-tools/kubernetes" for one nested arbitrarily deep. This is what makes the
- * open-depth links hierarchy and the flat companies registry validate against the exact same
- * logic.
- *
- * Companies live inside the "career" links root on disk (data/career/companies/**), so a single
- * recursive walk of data/ is split by whether a file falls under that companies subtree - links
- * are everything else.
+ * `categoryPath` is every directory segment between data/ and the file, joined with "/" -
+ * "career" for a flat root-level category, "technology/dev-tools/kubernetes" for one nested
+ * arbitrarily deep.
  */
-export async function loadCollection(kind) {
-  const allFiles = await listYamlFiles(PATHS.data);
-  const underCompanies = (file) =>
-    file === PATHS.companies || file.startsWith(PATHS.companies + path.sep);
-
-  const files = allFiles.filter((file) => (kind === 'companies' ? underCompanies(file) : !underCompanies(file)));
-  const base = kind === 'companies' ? PATHS.companies : PATHS.data;
+export async function loadEntries() {
+  const files = await listYamlFiles(PATHS.data);
 
   return Promise.all(
     files.map(async (file) => {
-      const segments = path.relative(base, path.dirname(file)).split(path.sep).filter(Boolean);
+      const segments = path.relative(PATHS.data, path.dirname(file)).split(path.sep).filter(Boolean);
       return {
         file,
         relPath: path.relative(REPO_ROOT, file),

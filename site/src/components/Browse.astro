@@ -8,8 +8,7 @@ interface FacetGroup {
   options: { value: string; label: string; count: number }[];
   /**
    * A facet with a single option is normally noise - a chip that every entry matches filters
-   * nothing. The exception is a toggle-shaped facet like "actively hiring", where the one chip
-   * is the whole point, so those opt in explicitly.
+   * nothing. A toggle-shaped facet whose single chip is the whole point opts in explicitly.
    */
   alwaysShow?: boolean;
 }
@@ -38,8 +37,7 @@ const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
  *
  * Per-category pages stay paginated regardless, so the crawlable path never depends on this page.
  */
-const sortKey = (item: CardItem) =>
-  `${PRIORITY_RANK[item.priority ?? ''] ?? (item.hiring_status === 'actively-hiring' ? 0 : 1)}`;
+const sortKey = (item: CardItem) => `${PRIORITY_RANK[item.priority ?? ''] ?? 1}`;
 ---
 
 <div class="browse" data-browse>
@@ -91,14 +89,9 @@ const sortKey = (item: CardItem) =>
           class="cell"
           data-item
           data-group={item.group}
-          data-type={item.type}
           data-priority={item.priority ?? ''}
           data-tags={item.tags.join(' ')}
           data-audience={(item.audience ?? []).join(' ')}
-          data-industry={item.industry ?? ''}
-          data-hiring={item.hiring_status ?? ''}
-          data-remote={item.remote_policy ?? ''}
-          data-size={item.size ?? ''}
           data-date={item.date_added}
           data-rank={sortKey(item)}
         >

@@ -17,7 +17,7 @@
  *   node scripts/fetch-favicons.mjs --force     refetch everything, ignoring the cache
  */
 
-import { loadCollection } from './lib/yaml-io.mjs';
+import { loadEntries } from './lib/yaml-io.mjs';
 import { fetchFaviconForEntry, fetchCoverForEntry } from './lib/enrich.mjs';
 
 const CONCURRENCY = 6;
@@ -40,20 +40,11 @@ async function runPool(items, limit, worker) {
 }
 
 async function main() {
-  const [links, companies] = await Promise.all([
-    loadCollection('links'),
-    loadCollection('companies'),
-  ]);
-
-  const targets = [
-    ...links.map((e) => ({ kind: 'links', slug: e.slug, url: e.data?.url, relPath: e.relPath })),
-    ...companies.map((e) => ({
-      kind: 'companies',
-      slug: e.slug,
-      url: e.data?.website,
-      relPath: e.relPath,
-    })),
-  ];
+  const targets = (await loadEntries()).map((e) => ({
+    slug: e.slug,
+    url: e.data?.url,
+    relPath: e.relPath,
+  }));
 
   console.log(`  Checking favicons and covers for ${targets.length} entries${force ? ' (--force)' : ''}...`);
 
@@ -62,8 +53,8 @@ async function main() {
       return { ...target, favicon: { status: 'failed', reason: 'no URL on this entry' }, cover: { status: 'failed', reason: 'no URL on this entry' } };
     }
     const [favicon, cover] = await Promise.all([
-      fetchFaviconForEntry(target.kind, target.slug, target.url, { force }),
-      fetchCoverForEntry(target.kind, target.slug, target.url, { force }),
+      fetchFaviconForEntry(target.slug, target.url, { force }),
+      fetchCoverForEntry(target.slug, target.url, { force }),
     ]);
     return { ...target, favicon, cover };
   });
@@ -75,7 +66,7 @@ async function main() {
 
     if (saved.length) {
       console.log(`\n  ${label} fetched ${saved.length}:`);
-      for (const r of saved) console.log(`    ${r.kind}/${r.slug}.${r[key].ext}  <-  ${r.relPath}`);
+      for (const r of saved) console.log(`    ${r.slug}.${r[key].ext}  <-  ${r.relPath}`);
     }
     if (failed.length) {
       console.log(`\n  No ${label.toLowerCase()} cached for ${failed.length}:`);

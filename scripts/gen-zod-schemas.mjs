@@ -16,10 +16,7 @@ import { REPO_ROOT, PATHS } from './lib/yaml-io.mjs';
 
 const OUT_DIR = path.join(REPO_ROOT, 'site', 'src', 'schemas', 'generated');
 
-const TARGETS = [
-  { file: 'link.schema.json', out: 'link.ts', name: 'linkSchema' },
-  { file: 'company.schema.json', out: 'company.ts', name: 'companySchema' },
-];
+const TARGETS = [{ file: 'link.schema.json', out: 'link.ts', name: 'linkSchema' }];
 
 const HEADER = `// GENERATED FILE - DO NOT EDIT.
 // Produced by scripts/gen-zod-schemas.mjs from schema/*.json, which is the single source of

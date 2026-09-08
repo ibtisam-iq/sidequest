@@ -18,10 +18,8 @@ jobs:
   create-entry:
     name: Turn the submission into a PR
     runs-on: ubuntu-latest
-    # Only the two entry forms; every other issue is ignored.
-    if: >
-      contains(github.event.issue.labels.*.name, 'new-link') ||
-      contains(github.event.issue.labels.*.name, 'new-company')
+    # Only the entry form; every other issue is ignored.
+    if: contains(github.event.issue.labels.*.name, 'new-link')
 
     steps:
       - uses: actions/checkout@v4
@@ -33,17 +31,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Determine submission type
-        id: kind
-        run: |
-          if [ "${HAS_LINK}" = "true" ]; then
-            echo "kind=links" >> "$GITHUB_OUTPUT"
-          else
-            echo "kind=companies" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          HAS_LINK: ${{ contains(github.event.issue.labels.*.name, 'new-link') }}
-
       # SECURITY: the issue body is untrusted input from anyone on the internet. It is passed
       # through the environment and never interpolated into the shell - `${{ github.event.issue.body }}`
       # inside a run: block would be a script-injection hole. The script derives filenames only
@@ -54,7 +41,7 @@ jobs:
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
-        run: node scripts/parse-issue-form.mjs --kind "${{ steps.kind.outputs.kind }}"
+        run: node scripts/parse-issue-form.mjs
 
       - name: Comment and stop - submission is invalid
         if: steps.parse.outputs.ok == 'false' && steps.parse.outputs.duplicate == ''
@@ -142,7 +129,7 @@ jobs:
           title: 'Add ${{ steps.parse.outputs.title }}'
           labels: |
             automated-pr
-            ${{ steps.kind.outputs.kind == 'links' && 'new-link' || 'new-company' }}
+            new-link
           body: |
             Closes #${{ github.event.issue.number }}
 
@@ -152,7 +139,7 @@ jobs:
             |---|---|
             | Entry | `${{ steps.parse.outputs.path }}` |
             | Slug | `${{ steps.parse.outputs.slug }}` |
-            | ${{ steps.kind.outputs.kind == 'links' && 'Category' || 'Country' }} | `${{ steps.parse.outputs.group }}` |
+            | Category | `${{ steps.parse.outputs.group }}` |
             | New to the taxonomy | ${{ steps.parse.outputs.new_category }} |
 
             ${{ steps.parse.outputs.notes }}

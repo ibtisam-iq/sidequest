@@ -1,7 +1,6 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 export type LinkEntry = CollectionEntry<'links'>;
-export type CompanyEntry = CollectionEntry<'companies'>;
 export type CategoryEntry = CollectionEntry<'categories'>;
 
 /**
@@ -12,8 +11,7 @@ export type CategoryEntry = CollectionEntry<'categories'>;
  * how many pages ask for it - that is what keeps build time flat as the dataset grows into the
  * thousands, rather than every category page re-scanning the whole set.
  *
- * Links are an arbitrary-depth tree below one of six fixed roots; companies stay a flat list of
- * countries, entirely unaffected by any of this.
+ * Entries live in an arbitrary-depth tree below one of six fixed roots.
  */
 
 let cache: Promise<Data> | null = null;
@@ -40,14 +38,10 @@ export interface CategoryCrumb {
 
 interface Data {
   links: LinkEntry[];
-  companies: CompanyEntry[];
-  categories: CategoryEntry[];
   linkCategories: CategoryEntry[];
-  countries: CategoryEntry[];
   /** Full category path (any depth) -> its DIRECT entries only, not descendants'. */
   linksByCategoryPath: Map<string, LinkEntry[]>;
-  companiesByCountry: Map<string, CompanyEntry[]>;
-  /** slug -> related link slugs, forward refs unioned with reverse refs. */
+  /** slug -> related entry slugs, forward refs unioned with reverse refs. */
   alternatives: Map<string, string[]>;
   linkBySlug: Map<string, LinkEntry>;
   tagCounts: Map<string, number>;
@@ -90,14 +84,12 @@ function buildAlternatives(links: LinkEntry[]): Map<string, string[]> {
 }
 
 async function build(): Promise<Data> {
-  const [links, companies, categories] = await Promise.all([
+  const [links, categories] = await Promise.all([
     getCollection('links'),
-    getCollection('companies'),
     getCollection('categories'),
   ]);
 
   links.sort(byDateDesc);
-  companies.sort(byDateDesc);
 
   const tagCounts = new Map<string, number>();
   for (const link of links) {
@@ -106,12 +98,8 @@ async function build(): Promise<Data> {
 
   return {
     links,
-    companies,
-    categories,
-    linkCategories: categories.filter((c) => c.data.type === 'links'),
-    countries: categories.filter((c) => c.data.type === 'companies' && !c.data.parent),
+    linkCategories: categories,
     linksByCategoryPath: groupBy(links, (l) => l.data.category),
-    companiesByCountry: groupBy(companies, (c) => c.data.country),
     alternatives: buildAlternatives(links),
     linkBySlug: new Map(links.map((l) => [l.id, l])),
     tagCounts,
@@ -200,18 +188,6 @@ export async function getLinkCategoryTree(): Promise<CategoryNode[]> {
   return withChildren.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Companies stay flat - unchanged shape, just filtered to top-level (always true for them). */
-export async function getCategoriesWithCounts() {
-  const data = await getData();
-  return data.countries
-    .map((c) => ({
-      slug: c.data.slug,
-      name: c.data.name,
-      count: data.companiesByCountry.get(c.data.slug)?.length ?? 0,
-    }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-}
-
 const NEW_WINDOW_DAYS = 14;
 
 /** True for entries added within the last two weeks - drives the "New" badge. */
@@ -224,25 +200,20 @@ export function isNew(dateAdded: string, now = new Date()): boolean {
 
 /** Shape shared by the client-side filtering JSON and the card component. */
 export interface CardItem {
-  type: 'link' | 'company';
   slug: string;
   title: string;
   href: string;
   url: string;
   description?: string;
-  /** Full category path (any depth) for a link; bare country slug for a company. */
+  /** Full category path, any depth. */
   group: string;
-  /** The leaf category/country display name. */
+  /** The leaf category's display name. */
   groupName: string;
-  /** Full breadcrumb chain root-first, links only - undefined for a company. */
-  categoryChain?: CategoryCrumb[];
+  /** Full breadcrumb chain, root first. */
+  categoryChain: CategoryCrumb[];
   tags: string[];
   priority?: string;
   audience?: string[];
-  industry?: string;
-  hiring_status?: string;
-  remote_policy?: string;
-  size?: string;
   legalRisk: boolean;
   date_added: string;
   isNew: boolean;
@@ -251,11 +222,10 @@ export interface CardItem {
 export async function getCardItems(): Promise<CardItem[]> {
   const data = await getData();
 
-  const links: CardItem[] = await Promise.all(
+  const items: CardItem[] = await Promise.all(
     data.links.map(async (l): Promise<CardItem> => {
       const categoryChain = await describeCategoryPath(l.data.category);
       return {
-        type: 'link',
         slug: l.id,
         title: l.data.title,
         // Entry URLs no longer nest under a category: link slugs are already unique dataset-
@@ -277,27 +247,5 @@ export async function getCardItems(): Promise<CardItem[]> {
     }),
   );
 
-  const countryName = (slug: string) =>
-    data.countries.find((c) => c.data.slug === slug)?.data.name ?? slug;
-
-  const companies: CardItem[] = data.companies.map((c) => ({
-    type: 'company',
-    slug: c.id,
-    title: c.data.name,
-    href: `/career/companies/${c.data.country}/entry/${c.id}`,
-    url: c.data.website,
-    description: c.data.rating,
-    group: c.data.country,
-    groupName: countryName(c.data.country),
-    tags: c.data.tags ?? [],
-    industry: c.data.industry,
-    hiring_status: c.data.hiring_status,
-    remote_policy: c.data.remote_policy,
-    size: c.data.size,
-    legalRisk: false,
-    date_added: c.data.date_added,
-    isNew: isNew(c.data.date_added),
-  }));
-
-  return [...links, ...companies].sort((a, b) => b.date_added.localeCompare(a.date_added));
+  return items.sort((a, b) => b.date_added.localeCompare(a.date_added));
 }

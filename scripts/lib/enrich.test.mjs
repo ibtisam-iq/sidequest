@@ -10,6 +10,9 @@ import { mock } from 'node:test';
  * from REPO_ROOT (via yaml-io.mjs), so REPO_ROOT is mocked to a scratch directory here rather
  * than touching the real site/public/{favicons,covers}/ - these tests must never depend on
  * network access or leave files in the real repo.
+ *
+ * Assets are keyed by bare slug: there is one collection, and validate.mjs enforces slug
+ * uniqueness across it.
  */
 
 let scratch;
@@ -27,52 +30,51 @@ test.after(async () => {
 
 test('cachedFaviconExt finds an exact slug match and ignores near-miss filenames', async () => {
   const { cachedFaviconExt } = await import('./enrich.mjs');
-  const dir = path.join(scratch, 'site', 'public', 'favicons', 'links');
+  const dir = path.join(scratch, 'site', 'public', 'favicons');
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'warp.png'), Buffer.from([0]));
   await writeFile(path.join(dir, 'warp-2.ico'), Buffer.from([0]));
 
-  assert.equal(await cachedFaviconExt('links', 'warp'), 'png');
-  assert.equal(await cachedFaviconExt('links', 'warp-2'), 'ico');
-  assert.equal(await cachedFaviconExt('links', 'warp-3'), null, 'must not prefix-match');
+  assert.equal(await cachedFaviconExt('warp'), 'png');
+  assert.equal(await cachedFaviconExt('warp-2'), 'ico');
+  assert.equal(await cachedFaviconExt('warp-3'), null, 'must not prefix-match');
 });
 
-test('cachedFaviconExt returns null when the collection has no favicons yet', async () => {
+test('cachedFaviconExt returns null when nothing is cached for that slug', async () => {
   const { cachedFaviconExt } = await import('./enrich.mjs');
-  assert.equal(await cachedFaviconExt('companies', 'nobody-yet'), null);
+  assert.equal(await cachedFaviconExt('nobody-yet'), null);
 });
 
-test('cachedCoverExt finds an exact slug match, namespaced separately from favicons', async () => {
+test('cachedCoverExt reads the covers directory, not the favicons one', async () => {
   const { cachedCoverExt } = await import('./enrich.mjs');
-  const dir = path.join(scratch, 'site', 'public', 'covers', 'links');
+  const dir = path.join(scratch, 'site', 'public', 'covers');
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'ghostty.jpg'), Buffer.from([0]));
 
-  assert.equal(await cachedCoverExt('links', 'ghostty'), 'jpg');
-  assert.equal(await cachedCoverExt('links', 'warp'), null, 'a cached favicon must not count as a cover');
+  assert.equal(await cachedCoverExt('ghostty'), 'jpg');
+  assert.equal(await cachedCoverExt('warp'), null, 'a cached favicon must not count as a cover');
 });
 
 test('fetchFaviconForEntry rejects a non-URL without making any network call', async () => {
   const { fetchFaviconForEntry } = await import('./enrich.mjs');
-  const result = await fetchFaviconForEntry('links', 'bad', 'not a url');
+  const result = await fetchFaviconForEntry('bad', 'not a url');
   assert.equal(result.status, 'failed');
   assert.match(result.reason, /not a valid absolute URL/);
 });
 
 test('fetchFaviconForEntry skips a slug that already has a cached file', async () => {
   const { fetchFaviconForEntry } = await import('./enrich.mjs');
-  const dir = path.join(scratch, 'site', 'public', 'favicons', 'companies');
+  const dir = path.join(scratch, 'site', 'public', 'favicons');
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'already-cached.svg'), Buffer.from([0]));
 
-  const result = await fetchFaviconForEntry('companies', 'already-cached', 'https://example.com');
+  const result = await fetchFaviconForEntry('already-cached', 'https://example.com');
   assert.deepEqual(result, { status: 'skipped', ext: 'svg' });
 });
 
 test('fetchFaviconForEntry reports failure rather than throwing for an unreachable host', async () => {
   const { fetchFaviconForEntry } = await import('./enrich.mjs');
   const result = await fetchFaviconForEntry(
-    'links',
     'unreachable',
     'https://this-host-does-not-exist.sidequest-test.invalid',
   );
@@ -81,17 +83,17 @@ test('fetchFaviconForEntry reports failure rather than throwing for an unreachab
 
 test('fetchCoverForEntry skips a slug that already has a cached cover', async () => {
   const { fetchCoverForEntry } = await import('./enrich.mjs');
-  const dir = path.join(scratch, 'site', 'public', 'covers', 'companies');
+  const dir = path.join(scratch, 'site', 'public', 'covers');
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'already-covered.png'), Buffer.from([0]));
 
-  const result = await fetchCoverForEntry('companies', 'already-covered', 'https://example.com');
+  const result = await fetchCoverForEntry('already-covered', 'https://example.com');
   assert.deepEqual(result, { status: 'skipped', ext: 'png' });
 });
 
 test('enrichEntry reports failure for both assets rather than throwing on a bad URL', async () => {
   const { enrichEntry } = await import('./enrich.mjs');
-  const result = await enrichEntry('links', 'bad', 'not a url');
+  const result = await enrichEntry('bad', 'not a url');
   assert.equal(result.favicon.status, 'failed');
   assert.equal(result.cover.status, 'failed');
   assert.equal(result.title, undefined);
@@ -107,17 +109,17 @@ test('fetchPageDetails never throws on an unreachable host and returns no candid
 
 test('cacheCandidate skips when the slug already has a cached favicon', async () => {
   const { cacheCandidate } = await import('./enrich.mjs');
-  const dir = path.join(scratch, 'site', 'public', 'favicons', 'links');
+  const dir = path.join(scratch, 'site', 'public', 'favicons');
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'precached.png'), Buffer.from([0]));
 
-  const result = await cacheCandidate('links', 'precached', { buf: Buffer.from([1]), ext: 'jpg' });
+  const result = await cacheCandidate('precached', { buf: Buffer.from([1]), ext: 'jpg' });
   assert.deepEqual(result, { status: 'skipped', ext: 'png' });
 });
 
 test('cacheCandidate reports failure when there is no candidate and nothing cached', async () => {
   const { cacheCandidate } = await import('./enrich.mjs');
-  const result = await cacheCandidate('links', 'nothing-found', null, { root: 'cover' });
+  const result = await cacheCandidate('nothing-found', null, { root: 'cover' });
   assert.equal(result.status, 'failed');
   assert.match(result.reason, /og:image/);
 });

@@ -16,7 +16,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { PATHS, loadCollection, REPO_ROOT } from './lib/yaml-io.mjs';
+import { PATHS, loadEntries } from './lib/yaml-io.mjs';
 import {
   readTaxonomy,
   resolveCategoryPath,
@@ -30,16 +30,15 @@ const warnings = [];
 const fail = (where, message) => errors.push({ where, message });
 const warn = (where, message) => warnings.push({ where, message });
 
-async function buildValidators() {
+async function buildValidator() {
   const ajv = new Ajv({ allErrors: true, strict: false });
   addFormats(ajv);
 
-  const [link, company] = await Promise.all([
-    readFile(path.join(PATHS.schema, 'link.schema.json'), 'utf8').then(JSON.parse),
-    readFile(path.join(PATHS.schema, 'company.schema.json'), 'utf8').then(JSON.parse),
-  ]);
+  const schema = JSON.parse(
+    await readFile(path.join(PATHS.schema, 'link.schema.json'), 'utf8'),
+  );
 
-  return { links: ajv.compile(link), companies: ajv.compile(company) };
+  return ajv.compile(schema);
 }
 
 function checkSchema(entries, validator) {
@@ -62,16 +61,17 @@ function checkSchema(entries, validator) {
   }
 }
 
-/** Slugs must be unique WITHIN a collection. A link and a company may share one. */
-function checkSlugUniqueness(entries, kind) {
+/** Slugs must be unique dataset-wide, so `alternatives` can reference them unambiguously. */
+function checkSlugUniqueness(entries) {
   const seen = new Map();
   for (const entry of entries) {
     const first = seen.get(entry.slug);
     if (first) {
       fail(
         entry.relPath,
-        `duplicate ${kind} slug "${entry.slug}" - already defined in ${first}. ` +
-          `Slugs must be unique within data/${kind}/ so that alternatives can reference them unambiguously.`,
+        `duplicate slug "${entry.slug}" - already defined in ${first}. ` +
+          `Slugs must be unique across the whole dataset so that alternatives can reference them ` +
+          `unambiguously, and so /entry/<slug> resolves to exactly one entry.`,
       );
       continue;
     }
@@ -79,76 +79,43 @@ function checkSlugUniqueness(entries, kind) {
   }
 }
 
-/** Duplicate URLs are checked across the WHOLE dataset - links and companies together. */
-function checkDuplicateUrls(links, companies) {
+/** Duplicate URLs are checked across the whole dataset. */
+function checkDuplicateUrls(entries) {
   const seen = new Map();
 
-  const record = (entry, rawUrl) => {
-    if (typeof rawUrl !== 'string') return;
+  for (const entry of entries) {
+    const rawUrl = entry.data?.url;
+    if (typeof rawUrl !== 'string') continue;
+
     let canonical;
     try {
       canonical = normalizeUrl(rawUrl);
     } catch {
-      return; // schema validation already reported the malformed URL
+      continue; // schema validation already reported the malformed URL
     }
+
     const first = seen.get(canonical);
     if (first) {
-      fail(
-        entry.relPath,
-        `duplicate URL - ${canonical} is already catalogued in ${first}`,
-      );
-      return;
+      fail(entry.relPath, `duplicate URL - ${canonical} is already catalogued in ${first}`);
+      continue;
     }
     seen.set(canonical, entry.relPath);
-  };
-
-  for (const entry of links) record(entry, entry.data?.url);
-  for (const entry of companies) record(entry, entry.data?.website);
+  }
 
   return seen;
 }
 
 /**
- * Companies stay flat: `country` must be a registered top-level companies slug, and the file
- * must sit directly in `data/career/companies/<country>/`.
- */
-function checkCompanyTaxonomy(entries, taxonomy) {
-  const registered = new Set(
-    taxonomy.filter((c) => c.type === 'companies' && !c.parent).map((c) => c.slug),
-  );
-
-  for (const entry of entries) {
-    const value = entry.data?.country;
-    if (typeof value !== 'string') continue; // schema already flagged it
-
-    if (!registered.has(value)) {
-      fail(
-        entry.relPath,
-        `country "${value}" is not registered in taxonomy/categories.yaml with type: companies. ` +
-          `Add it there (or via npm run add-company) before using it.`,
-      );
-    }
-
-    if (entry.categoryPath !== value) {
-      fail(
-        entry.relPath,
-        `country is "${value}" but the file sits at "data/career/companies/${entry.categoryPath}" - they must match`,
-      );
-    }
-  }
-}
-
-/**
- * Links are an arbitrary-depth tree: `category` must resolve to a chain of registered
+ * Categories are an arbitrary-depth tree: `category` must resolve to a chain of registered
  * categories starting at one of the six roots, to any depth, and the file must sit at the
  * matching folder path.
  */
-async function checkLinkTaxonomy(entries) {
+async function checkTaxonomy(entries) {
   for (const entry of entries) {
     const value = entry.data?.category;
     if (typeof value !== 'string') continue; // schema already flagged it
 
-    const resolved = await resolveCategoryPath('links', value);
+    const resolved = await resolveCategoryPath(value);
     if (!resolved.valid) {
       fail(
         entry.relPath,
@@ -199,11 +166,11 @@ function checkLegalRisk(entries) {
   }
 }
 
-/** `alternatives` may only reference real link slugs, and never itself. */
-function checkAlternatives(links) {
-  const known = new Set(links.map((e) => e.slug));
+/** `alternatives` may only reference real entry slugs, and never itself. */
+function checkAlternatives(entries) {
+  const known = new Set(entries.map((e) => e.slug));
 
-  for (const entry of links) {
+  for (const entry of entries) {
     const alts = entry.data?.alternatives;
     if (!Array.isArray(alts)) continue;
 
@@ -211,10 +178,7 @@ function checkAlternatives(links) {
       if (alt === entry.slug) {
         fail(entry.relPath, `alternatives lists itself ("${alt}")`);
       } else if (!known.has(alt)) {
-        fail(
-          entry.relPath,
-          `alternatives references "${alt}", which is not an existing link entry slug`,
-        );
+        fail(entry.relPath, `alternatives references "${alt}", which is not an existing entry slug`);
       }
     }
   }
@@ -223,36 +187,30 @@ function checkAlternatives(links) {
 /** Registered categories with no entries are fine, but worth surfacing. */
 function checkEmptyCategories(taxonomy, counts) {
   for (const category of taxonomy) {
-    const group = counts.get(category.type);
     const path = category.parent ? `${category.parent}/${category.slug}` : category.slug;
-    const hasChildren =
-      !category.parent && taxonomy.some((c) => c.type === category.type && c.parent === category.slug);
+    const hasChildren = taxonomy.some((c) => c.parent === path);
 
-    const n = reportCountFor(group ?? new Map(), path, hasChildren);
-    if (!n) {
-      warn(
-        'taxonomy/categories.yaml',
-        `category "${path}" (${category.type}) has no entries yet`,
-      );
+    if (!reportCountFor(counts, path, hasChildren)) {
+      warn('taxonomy/categories.yaml', `category "${path}" has no entries yet`);
     }
   }
 }
 
-function countByGroup(entries, field) {
+function countByCategory(entries) {
   const counts = new Map();
   for (const entry of entries) {
-    const key = entry.data?.[field];
+    const key = entry.data?.category;
     if (typeof key === 'string') counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return counts;
 }
 
 /** Direct count for an exact path, plus (for a parent) every entry filed under its children too. */
-function reportCountFor(counts, slug, isParentWithChildren) {
-  let n = counts.get(slug) ?? 0;
+function reportCountFor(counts, categoryPath, isParentWithChildren) {
+  let n = counts.get(categoryPath) ?? 0;
   if (isParentWithChildren) {
     for (const [key, value] of counts) {
-      if (key.startsWith(`${slug}/`)) n += value;
+      if (key.startsWith(`${categoryPath}/`)) n += value;
     }
   }
   return n;
@@ -261,24 +219,24 @@ function reportCountFor(counts, slug, isParentWithChildren) {
 function printReport(taxonomy, counts) {
   console.log('\n  Entry counts (computed, never stored)\n');
 
-  for (const type of ['links', 'companies']) {
-    const group = counts.get(type);
-    const registered = taxonomy.filter((c) => c.type === type);
-    const topLevel = registered.filter((c) => !c.parent);
-    const total = [...group.values()].reduce((a, b) => a + b, 0);
+  const roots = taxonomy.filter((c) => !c.parent);
+  const total = [...counts.values()].reduce((a, b) => a + b, 0);
 
-    console.log(`  ${type} - ${total} entries across ${topLevel.length} top-level`);
-    for (const parent of topLevel) {
-      const children = registered.filter((c) => c.parent === parent.slug);
-      const n = reportCountFor(group, parent.slug, children.length > 0);
-      console.log(`    ${String(n).padStart(4)}  ${parent.slug}`);
-      for (const child of children) {
-        const childCount = reportCountFor(group, `${parent.slug}/${child.slug}`, false);
-        console.log(`    ${String(childCount).padStart(4)}    - ${child.slug}`);
-      }
+  console.log(`  ${total} entries across ${roots.length} roots`);
+  for (const root of roots) {
+    const children = taxonomy.filter((c) => c.parent === root.slug);
+    console.log(
+      `    ${String(reportCountFor(counts, root.slug, children.length > 0)).padStart(4)}  ${root.slug}`,
+    );
+    for (const child of children) {
+      const childPath = `${root.slug}/${child.slug}`;
+      const hasChildren = taxonomy.some((c) => c.parent === childPath);
+      console.log(
+        `    ${String(reportCountFor(counts, childPath, hasChildren)).padStart(4)}    - ${child.slug}`,
+      );
     }
-    console.log('');
   }
+  console.log('');
 }
 
 async function main() {
@@ -286,27 +244,20 @@ async function main() {
   const wantsReport = args.includes('--report');
   const dupFlag = args.indexOf('--check-duplicate-url');
 
-  const [validators, taxonomy, links, companies] = await Promise.all([
-    buildValidators(),
+  const [validator, taxonomy, entries] = await Promise.all([
+    buildValidator(),
     readTaxonomy(),
-    loadCollection('links'),
-    loadCollection('companies'),
+    loadEntries(),
   ]);
 
-  checkSchema(links, validators.links);
-  checkSchema(companies, validators.companies);
-  checkSlugUniqueness(links, 'links');
-  checkSlugUniqueness(companies, 'companies');
-  const urlIndex = checkDuplicateUrls(links, companies);
-  await checkLinkTaxonomy(links);
-  checkCompanyTaxonomy(companies, taxonomy);
-  checkAlternatives(links);
-  checkLegalRisk(links);
+  checkSchema(entries, validator);
+  checkSlugUniqueness(entries);
+  const urlIndex = checkDuplicateUrls(entries);
+  await checkTaxonomy(entries);
+  checkAlternatives(entries);
+  checkLegalRisk(entries);
 
-  const counts = new Map([
-    ['links', countByGroup(links, 'category')],
-    ['companies', countByGroup(companies, 'country')],
-  ]);
+  const counts = countByCategory(entries);
   checkEmptyCategories(taxonomy, counts);
 
   // --check-duplicate-url: a question, not a validation. Answer it and exit.
@@ -332,14 +283,12 @@ async function main() {
     process.exit(0);
   }
 
-  const total = links.length + companies.length;
-
   for (const { where, message } of warnings) {
     console.warn(`  warn  ${where}\n        ${message}`);
   }
 
   if (errors.length) {
-    console.error(`\n  ${errors.length} error(s) in ${total} entries:\n`);
+    console.error(`\n  ${errors.length} error(s) in ${entries.length} entries:\n`);
     for (const { where, message } of errors) {
       console.error(`  error  ${where}\n         ${message}\n`);
     }
@@ -347,7 +296,7 @@ async function main() {
   }
 
   console.log(
-    `\n  OK - ${total} entries valid (${links.length} links, ${companies.length} companies)` +
+    `\n  OK - ${entries.length} entries valid` +
       `${warnings.length ? `, ${warnings.length} warning(s)` : ''}`,
   );
 

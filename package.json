@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "An open-source, git-backed personal directory of tools, repos, articles, courses, communities, job boards and notable companies.",
+  "description": "An open-source, git-backed personal directory of tools, repos, articles, courses, communities, job boards and anything else worth rescuing from being forgotten.",
   "license": "MIT",
   "author": "Muhammad Ibtisam",
   "homepage": "https://sidequest.ibtisam-iq.com",
@@ -18,7 +18,6 @@
     "validate": "node scripts/validate.mjs",
     "fetch-favicons": "node scripts/fetch-favicons.mjs",
     "add-link": "node scripts/add-link.mjs",
-    "add-company": "node scripts/add-company.mjs",
     "import-bulk": "node scripts/import-bulk.mjs",
     "import-review": "node scripts/import-review.mjs",
     "test": "node --experimental-test-module-mocks --test \"scripts/lib/*.test.mjs\""
