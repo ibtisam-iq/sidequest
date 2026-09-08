@@ -5,7 +5,6 @@ anything re-explained by the user to start being useful.
 
 Companion file: **`STATUS.md`** is the running build log - what has actually been done so far,
 appended after every meaningful chunk of work. Read it second to learn the current state.
-**`docs/PLAN.md`** is the approved build plan.
 
 ---
 
@@ -73,7 +72,6 @@ collection needs its own facets and its own scale, it needs its own repo.
 ```
 CLAUDE.md          this file - working context
 STATUS.md          running build log, append-only
-docs/PLAN.md       the approved build plan
 README.md  CONTRIBUTING.md  CODE_OF_CONDUCT.md  LICENSE
 
 package.json       root: deps for scripts/ only (ajv, js-yaml, @clack/prompts, ...)

@@ -4,7 +4,6 @@ Append-only running log of what has actually been built. Newest entries at the b
 Never overwrite a prior entry.
 
 Read `CLAUDE.md` first for working context, then this file for current state.
-`docs/PLAN.md` holds the approved build plan.
 
 ---
 
