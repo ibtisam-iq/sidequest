@@ -5,6 +5,7 @@ import { isExcluded } from './import-exclusions.mjs';
 test('excludes the site owner\'s own personal profile and contact links', () => {
   assert.ok(isExcluded('https://x.com/ibtisam_iq'));
   assert.ok(isExcluded('https://wa.me/923046210233'));
+  assert.ok(isExcluded('https://wa.me/923046210222'));
   assert.ok(isExcluded('https://www.facebook.com/ibtisam.iqx'));
   assert.ok(isExcluded('https://github.com/ibtisam-iq'));
   assert.ok(isExcluded('https://www.linkedin.com/in/ibtisam-iq/'));
