@@ -10,6 +10,7 @@ export const EXCLUDED_URL_SUBSTRINGS = [
   // The site owner's own personal profile / contact info.
   'x.com/ibtisam_iq',
   'wa.me/923046210233',
+  'wa.me/923046210222',
   'facebook.com/ibtisam.iqx',
   'github.com/ibtisam-iq',
   'linkedin.com/in/ibtisam-iq',
